@@ -8,6 +8,15 @@ importers:
 
   .:
     devDependencies:
+      '@counterparty/config':
+        specifier: workspace:*
+        version: link:packages/config
+      '@counterparty/core':
+        specifier: workspace:*
+        version: link:packages/core
+      '@counterparty/rails':
+        specifier: workspace:*
+        version: link:packages/rails
       '@types/node':
         specifier: ^26.3.0
         version: 26.3.0
@@ -21,11 +30,23 @@ importers:
         specifier: ^4.1.11
         version: 4.1.11(@types/node@26.3.0)(vite@8.2.2(@types/node@26.3.0)(esbuild@0.28.2)(tsx@4.23.12))
 
+  packages/config: {}
+
   packages/core:
     dependencies:
       zod:
         specifier: ^4.4.3
         version: 4.4.3
+    devDependencies:
+      dotenv:
+        specifier: ^17.4.2
+        version: 17.4.2
+
+  packages/rails:
+    dependencies:
+      '@counterparty/core':
+        specifier: workspace:*
+        version: link:../core
 
 packages:
 
@@ -468,6 +489,10 @@ packages:
   detect-libc@2.1.2:
     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
     engines: {node: '>=8'}
+
+  dotenv@17.4.2:
+    resolution: {integrity: sha512-nI4U3TottKAcAD9LLud4Cb7b2QztQMUEfHbvhTH09bqXTxnSie8WnjPALV/WMCrJZ6UV/qHJ6L03OqO3LcdYZw==}
+    engines: {node: '>=12'}
 
   es-module-lexer@2.3.2:
     resolution: {integrity: sha512-poHGpORABojJJucnV9KbOavETW8lBVnphkW77ER5/BQ5Fz7oXSoCNek7IH3vR5nRjdsEz926ibFYX8KtLQmdyw==}
@@ -990,6 +1015,8 @@ snapshots:
   convert-source-map@2.0.0: {}
 
   detect-libc@2.1.2: {}
+
+  dotenv@17.4.2: {}
 
   es-module-lexer@2.3.2: {}
 

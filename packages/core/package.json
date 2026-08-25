@@ -11,5 +11,8 @@
   "description": "Pure domain logic: mandate, gate, pressure, budget, audit, catalog. No I/O.",
   "dependencies": {
     "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "dotenv": "^17.4.2"
   }
 }

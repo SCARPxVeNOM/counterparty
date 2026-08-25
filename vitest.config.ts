@@ -7,6 +7,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@counterparty/core': r('./packages/core/src/index.ts'),
+      '@counterparty/config': r('./packages/config/src/index.ts'),
       '@counterparty/llm': r('./packages/llm/src/index.ts'),
       '@counterparty/rails': r('./packages/rails/src/index.ts'),
       '@counterparty/extract': r('./packages/extract/src/index.ts'),

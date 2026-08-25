@@ -17,6 +17,9 @@
     "smoke:live": "tsx scripts/smoke-live.ts"
   },
   "devDependencies": {
+    "@counterparty/config": "workspace:*",
+    "@counterparty/core": "workspace:*",
+    "@counterparty/rails": "workspace:*",
     "@types/node": "^26.3.0",
     "tsx": "^4.23.12",
     "typescript": "^7.0.2",
