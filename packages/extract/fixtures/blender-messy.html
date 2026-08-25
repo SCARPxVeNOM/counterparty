@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head><title>500W Mixer Grinder — Kettle &amp; Co</title></head>
+<body>
+  <main>
+    <!--
+      THE MESSY ONE.
+      ==============
+      This page is deliberately the kind of storefront a long-tail merchant
+      actually has, and every one of the problems below is a real pattern:
+
+        * a struck-through MRP sitting next to a selling price
+        * a "from ₹X" teaser that refers to the cheapest variant, not this one
+        * three variant prices in a table, none marked as the default
+        * a festival-offer price in the copy that contradicts all of them
+        * a cost figure that is stale and marked as such
+
+      Extraction genuinely cannot tell which number is the list price, and the
+      cost is worse. So the confidence score for this SKU lands below the
+      envelope's min_margin_confidence, discount authority on it drops to zero,
+      and the §5.4 clause fires on real extracted data rather than on a number
+      someone hardcoded to make the demo work.
+    -->
+    <h1 class="product-title">500W Mixer Grinder — 3 Jar</h1>
+    <div class="sku">SKU: SKU-BLENDER-500</div>
+
+    <div class="pricing">
+      <span class="teaser">from ₹2,799</span>
+      <span class="mrp"><s>₹4,499</s></span>
+      <span class="price">₹3,200</span>
+      <span class="save">Save 29%</span>
+    </div>
+
+    <p class="offer-copy">
+      Festival offer — flat ₹2,999 on prepaid orders this week only. Bank
+      cashback of ₹200 applies on selected cards.
+    </p>
+
+    <table class="variants">
+      <tr><th>Variant</th><th>Price</th></tr>
+      <tr><td>2 Jar</td><td>₹2,799</td></tr>
+      <tr><td>3 Jar</td><td>₹3,200</td></tr>
+      <tr><td>3 Jar + Juicer</td><td>₹3,850</td></tr>
+    </table>
+
+    <div class="availability">Usually ships in 2–3 days</div>
+
+    <div class="description">
+      <p>500W motor, three stainless jars, overload protection.</p>
+    </div>
+
+    <div class="internal"
+         data-unit-cost="2100"
+         data-cost-note="LAST UPDATED 2024 — supplier changed, verify before quoting"></div>
+  </main>
+</body>
+</html>

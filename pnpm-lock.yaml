@@ -112,6 +112,12 @@ importers:
         specifier: workspace:*
         version: link:../llm
 
+  packages/extract:
+    dependencies:
+      '@counterparty/core':
+        specifier: workspace:*
+        version: link:../core
+
   packages/llm:
     dependencies:
       '@counterparty/config':
