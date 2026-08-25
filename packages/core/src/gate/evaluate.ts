@@ -21,9 +21,9 @@
  * re-proposes at the counter instead of guessing.
  */
 
-import { signPayload } from '../crypto/sign.js';
-import type { JsonObject } from '../crypto/canonical.js';
-import type { KeyPair } from '../crypto/keys.js';
+import { signPayload } from '../crypto/sign';
+import type { JsonObject } from '../crypto/canonical';
+import type { KeyPair } from '../crypto/keys';
 import {
   ZERO,
   addPaise,
@@ -37,17 +37,17 @@ import {
   rupeesToPaise,
   subPaise,
   type Paise,
-} from '../money.js';
-import { limitsOf, type MandateLimits } from '../mandate/issue.js';
-import { skuIsEligible, type ClausePath, type SellingMandate } from '../mandate/schema.js';
-import { pressureCeilingPct, type PressureSnapshot } from '../pressure/reduce.js';
-import type { SkuPricing } from '../catalog/schema.js';
+} from '../money';
+import { limitsOf, type MandateLimits } from '../mandate/issue';
+import { skuIsEligible, type ClausePath, type SellingMandate } from '../mandate/schema';
+import { pressureCeilingPct, type PressureSnapshot } from '../pressure/reduce';
+import type { SkuPricing } from '../catalog/schema';
 import {
   available,
   drawnByBuyer,
   reserve,
   type BudgetState,
-} from '../budget/ledger.js';
+} from '../budget/ledger';
 import {
   OFFER_VERSION,
   brandAsSigned,
@@ -58,7 +58,7 @@ import {
   type RefundAuthorization,
   type RefundProposal,
   type SignedOffer,
-} from './offer.js';
+} from './offer';
 
 export interface GateContext {
   readonly mandate: SellingMandate;

@@ -25,8 +25,8 @@
  * Compile-time for accidents, signature verification for everything else.
  */
 
-import type { Signature } from '../crypto/sign.js';
-import type { ClausePath } from '../mandate/schema.js';
+import type { Signature } from '../crypto/sign';
+import type { ClausePath } from '../mandate/schema';
 
 declare const SIGNED_BY_GATE: unique symbol;
 

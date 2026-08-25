@@ -12,7 +12,7 @@ import {
   paiseToRupees,
   rupeesToPaise,
   subPaise,
-} from '../src/money.js';
+} from '../src/money';
 
 describe('paise construction', () => {
   it('rejects fractional paise', () => {

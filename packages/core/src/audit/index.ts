@@ -14,4 +14,4 @@ export {
   type AuditRow,
   type ChainVerification,
   type MoneyAction,
-} from './ledger.js';
+} from './ledger';

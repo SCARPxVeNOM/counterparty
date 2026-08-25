@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { jaccard, contentTokens, requestedPercentages, runDetectors } from '../../src/pressure/detectors.js';
-import type { SignalKind } from '../../src/pressure/signals.js';
+import { jaccard, contentTokens, requestedPercentages, runDetectors } from '../../src/pressure/detectors';
+import type { SignalKind } from '../../src/pressure/signals';
 import {
   BENIGN,
   MULTI_TURN_CATEGORIES,
   SINGLE_TURN_CATEGORIES,
-} from './corpus.js';
+} from './corpus';
 
 function kindsFor(message: string): SignalKind[] {
   return runDetectors({ message, turn: 1, history: [] }).map((s) => s.kind);

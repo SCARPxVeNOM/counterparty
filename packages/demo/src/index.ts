@@ -107,3 +107,5 @@ export function demoMandate(overrides?: Parameters<typeof draftMandate>[0]['auth
 export function demoBudget(): BudgetState {
   return openBudget(rupeesToPaise(40000), dayKeyOf(DEMO_NOW));
 }
+
+export { ScriptedSeller } from './scripted-seller';

@@ -17,7 +17,7 @@
  * they are the floor.
  */
 
-import { signal, type PressureSignal, type SignalKind } from './signals.js';
+import { signal, type PressureSignal, type SignalKind } from './signals';
 
 export interface TurnRecord {
   readonly turn: number;

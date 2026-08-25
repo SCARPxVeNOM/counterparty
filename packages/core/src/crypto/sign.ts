@@ -12,14 +12,14 @@
  */
 
 import { sign as nodeSign, verify as nodeVerify } from 'node:crypto';
-import { canonicalBytes, type JsonObject } from './canonical.js';
+import { canonicalBytes, type JsonObject } from './canonical';
 import {
   toPrivateKeyObject,
   toPublicKeyObject,
   type KeyPair,
   type KeyRole,
   type PublicKeyRef,
-} from './keys.js';
+} from './keys';
 
 export type Signature = {
   readonly alg: 'Ed25519';

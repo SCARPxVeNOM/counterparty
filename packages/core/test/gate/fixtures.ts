@@ -1,12 +1,12 @@
-import { generateKeyPair, publicKeyRef, type KeyPair } from '../../src/crypto/keys.js';
-import { draftMandate } from '../../src/mandate/draft.js';
-import { issueMandate } from '../../src/mandate/issue.js';
-import type { SellingMandate, UnsignedMandate } from '../../src/mandate/schema.js';
-import { openBudget, dayKeyOf, type BudgetState } from '../../src/budget/ledger.js';
-import { INITIAL_PRESSURE, type PressureSnapshot } from '../../src/pressure/reduce.js';
-import { rupeesToPaise } from '../../src/money.js';
-import type { SkuPricing } from '../../src/catalog/schema.js';
-import type { GateContext } from '../../src/gate/evaluate.js';
+import { generateKeyPair, publicKeyRef, type KeyPair } from '../../src/crypto/keys';
+import { draftMandate } from '../../src/mandate/draft';
+import { issueMandate } from '../../src/mandate/issue';
+import type { SellingMandate, UnsignedMandate } from '../../src/mandate/schema';
+import { openBudget, dayKeyOf, type BudgetState } from '../../src/budget/ledger';
+import { INITIAL_PRESSURE, type PressureSnapshot } from '../../src/pressure/reduce';
+import { rupeesToPaise } from '../../src/money';
+import type { SkuPricing } from '../../src/catalog/schema';
+import type { GateContext } from '../../src/gate/evaluate';
 
 export const merchantKey: KeyPair = generateKeyPair('merchant');
 export const gateKey: KeyPair = generateKeyPair('gate');

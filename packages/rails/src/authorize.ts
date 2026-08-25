@@ -6,14 +6,14 @@
  */
 
 import type { SignedOffer } from '@counterparty/core';
-import { RazorpayClient, type RawPaymentLink, type RawList, type RawPayment } from './client.js';
+import { RazorpayClient, type RawPaymentLink, type RawList, type RawPayment } from './client';
 import {
   RailsError,
   type Authorizer,
   type RazorpayOrder,
   type RazorpayPayment,
   type PaymentState,
-} from './types.js';
+} from './types';
 
 /**
  * Puts a real payment link in front of a human and waits for them to pay.

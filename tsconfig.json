@@ -5,6 +5,7 @@
       "@counterparty/core": ["./packages/core/src/index.ts"],
       "@counterparty/core/*": ["./packages/core/src/*"],
       "@counterparty/config": ["./packages/config/src/index.ts"],
+      "@counterparty/demo": ["./packages/demo/src/index.ts"],
       "@counterparty/llm": ["./packages/llm/src/index.ts"],
       "@counterparty/rails": ["./packages/rails/src/index.ts"],
       "@counterparty/extract": ["./packages/extract/src/index.ts"],
@@ -22,3 +23,4 @@
   ],
   "exclude": ["node_modules", "**/dist", "apps/web"]
 }
+

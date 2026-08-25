@@ -5,9 +5,9 @@ import {
   loadKeyPair,
   publicKeyRef,
   rawPublicKey,
-} from '../../src/crypto/keys.js';
-import { signPayload, stripSignature, verifySigned } from '../../src/crypto/sign.js';
-import type { JsonObject } from '../../src/crypto/canonical.js';
+} from '../../src/crypto/keys';
+import { signPayload, stripSignature, verifySigned } from '../../src/crypto/sign';
+import type { JsonObject } from '../../src/crypto/canonical';
 
 const merchant = generateKeyPair('merchant');
 const gate = generateKeyPair('gate');

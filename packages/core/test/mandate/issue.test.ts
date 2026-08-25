@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { generateKeyPair, publicKeyRef } from '../../src/crypto/keys.js';
-import type { JsonObject } from '../../src/crypto/canonical.js';
-import { draftMandate } from '../../src/mandate/draft.js';
-import { MandateError, issueMandate, limitsOf, verifyMandate } from '../../src/mandate/issue.js';
-import { matchesSkuPattern, skuIsEligible } from '../../src/mandate/schema.js';
+import { generateKeyPair, publicKeyRef } from '../../src/crypto/keys';
+import type { JsonObject } from '../../src/crypto/canonical';
+import { draftMandate } from '../../src/mandate/draft';
+import { MandateError, issueMandate, limitsOf, verifyMandate } from '../../src/mandate/issue';
+import { matchesSkuPattern, skuIsEligible } from '../../src/mandate/schema';
 
 const merchantKey = generateKeyPair('merchant');
 const gateKey = generateKeyPair('gate');

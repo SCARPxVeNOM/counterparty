@@ -14,10 +14,10 @@ import {
   type SignedOffer,
   type SkuPricing,
 } from '@counterparty/core';
-import { RazorpayClient } from '../src/client.js';
-import { LiveAuthorizer, SimAuthorizer } from '../src/authorize.js';
-import { Rails } from '../src/rails.js';
-import { RailsError, type RazorpayPayment } from '../src/types.js';
+import { RazorpayClient } from '../src/client';
+import { LiveAuthorizer, SimAuthorizer } from '../src/authorize';
+import { Rails } from '../src/rails';
+import { RailsError, type RazorpayPayment } from '../src/types';
 
 const merchantKey = generateKeyPair('merchant');
 const gateKey = generateKeyPair('gate');

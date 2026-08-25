@@ -32,7 +32,15 @@ import {
 } from '@counterparty/core';
 import { Session } from '@counterparty/agents';
 import type { GenerateRequest, GenerateResult, LLMProvider } from '@counterparty/llm';
-import { CATALOG, DEMO_MERCHANT, DEMO_NOW, demoBudget, demoMandate, gateKey, merchantKey } from './fixtures.js';
+import {
+  CATALOG,
+  DEMO_MERCHANT,
+  DEMO_NOW,
+  demoBudget,
+  demoMandate,
+  gateKey,
+  merchantKey,
+} from '@counterparty/demo';
 
 // ---------------------------------------------------------------------------
 // A provider that plays a fixed script, so the demo is reproducible.

@@ -8,7 +8,7 @@ import {
   type GenerateRequest,
   type GenerateResult,
   type LLMProvider,
-} from './provider.js';
+} from './provider';
 
 export class GeminiProvider implements LLMProvider {
   readonly name = 'gemini';

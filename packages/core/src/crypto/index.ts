@@ -5,7 +5,7 @@ export {
   type JsonObject,
   type JsonPrimitive,
   type JsonValue,
-} from './canonical.js';
+} from './canonical';
 
 export {
   generateKeyPair,
@@ -17,7 +17,7 @@ export {
   type KeyPair,
   type KeyRole,
   type PublicKeyRef,
-} from './keys.js';
+} from './keys';
 
 export {
   signPayload,
@@ -29,4 +29,4 @@ export {
   type Signed,
   type VerifyFailure,
   type VerifyResult,
-} from './sign.js';
+} from './sign';

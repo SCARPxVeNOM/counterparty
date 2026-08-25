@@ -4,7 +4,7 @@ export {
   toTurn,
   type SellingAgentContext,
   type SellingAgentTurn,
-} from './selling-agent.js';
+} from './selling-agent';
 
 export {
   ADVERSARIAL_PERSONAS,
@@ -16,6 +16,6 @@ export {
   type BuyerContext,
   type Persona,
   type PersonaId,
-} from './buyer.js';
+} from './buyer';
 
-export { Session, type SessionOptions, type TurnResult } from './session.js';
+export { Session, type SessionOptions, type TurnResult } from './session';

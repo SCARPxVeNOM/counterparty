@@ -23,7 +23,7 @@ export {
   type PressurePolicy,
   type SellingMandate,
   type UnsignedMandate,
-} from './schema.js';
+} from './schema';
 
 export {
   MandateError,
@@ -33,6 +33,6 @@ export {
   verifyMandate,
   type MandateLimits,
   type MandateVerification,
-} from './issue.js';
+} from './issue';
 
-export { draftMandate, type DraftMandateInput } from './draft.js';
+export { draftMandate, type DraftMandateInput } from './draft';

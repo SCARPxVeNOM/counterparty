@@ -7,9 +7,9 @@
  */
 
 import { loadConfig, type Config } from '@counterparty/config';
-import { CassetteProvider, type CassetteMode } from './cassette.js';
-import { GeminiProvider } from './gemini.js';
-import { UnavailableProvider, type LLMProvider } from './provider.js';
+import { CassetteProvider, type CassetteMode } from './cassette';
+import { GeminiProvider } from './gemini';
+import { UnavailableProvider, type LLMProvider } from './provider';
 
 export interface ProviderChoice {
   readonly provider: LLMProvider;

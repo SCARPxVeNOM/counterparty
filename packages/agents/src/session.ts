@@ -44,7 +44,7 @@ import {
   type TurnRecord,
 } from '@counterparty/core';
 import { classifyPressure, type LLMProvider } from '@counterparty/llm';
-import { SellingAgent, type SellingAgentTurn } from './selling-agent.js';
+import { SellingAgent, type SellingAgentTurn } from './selling-agent';
 
 export interface SessionOptions {
   readonly sessionId: string;

@@ -21,4 +21,4 @@ export {
   type ReserveRequest,
   type ReserveResult,
   type SettleResult,
-} from './ledger.js';
+} from './ledger';

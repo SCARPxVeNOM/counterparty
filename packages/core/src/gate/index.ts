@@ -13,7 +13,7 @@ export {
   type RefundProposal,
   type SettlementPath,
   type SignedOffer,
-} from './offer.js';
+} from './offer';
 
 export {
   evaluate,
@@ -23,4 +23,4 @@ export {
   type QuoteDecision,
   type RefundDecision,
   type Refusal,
-} from './evaluate.js';
+} from './evaluate';

@@ -1,0 +1,682 @@
+/*
+ * Counterparty console.
+ *
+ * The aesthetic is a flight recorder, not a dashboard. This instrument
+ * adjudicates money while someone is actively trying to manipulate it, and it
+ * should read like something that keeps working when things go wrong: warm
+ * black chassis, hairline rules, tabular readouts, and one colour per meaning.
+ *
+ *   amber   authority, and the spending of it
+ *   oxide   refusal, and collapse
+ *   cyan    cryptographic proof — signatures and chain hashes only
+ *
+ * Nothing else is coloured. When the whole panel goes oxide, that is the
+ * envelope collapsing, and it should be the only thing anyone looks at.
+ */
+
+:root {
+  --chassis: #0b0a09;
+  --chassis-raised: #131110;
+  --chassis-sunk: #070606;
+  --rule: #241f1c;
+  --rule-bright: #372f2a;
+
+  --paper: #e9e3d8;
+  --paper-dim: #9c948a;
+  --paper-faint: #635c55;
+
+  --amber: #e0a13c;
+  --amber-dim: #7a5720;
+  --oxide: #d4553c;
+  --oxide-dim: #6e2c1f;
+  --cyan: #56c4d2;
+  --cyan-dim: #2a5f66;
+
+  --grid: 4px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--chassis);
+  color: var(--paper);
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Grain. Keeps large dark fields from reading as flat CSS black. */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display), Georgia, serif;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  margin: 0;
+}
+
+/* ── chassis ─────────────────────────────────────────────────────────── */
+
+.console {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(360px, 0.85fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  height: 100vh;
+  gap: 0;
+}
+
+.masthead {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: baseline;
+  gap: 18px;
+  padding: 14px 22px 12px;
+  border-bottom: 1px solid var(--rule);
+  background: var(--chassis-raised);
+}
+
+.wordmark {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 25px;
+  letter-spacing: 0.005em;
+}
+
+.tagline {
+  color: var(--paper-faint);
+  font-size: 11px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.masthead-right {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* ── generic panel ───────────────────────────────────────────────────── */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-left: 1px solid var(--rule);
+}
+
+.panel:first-child {
+  border-left: none;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 18px;
+  border-bottom: 1px solid var(--rule);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--paper-faint);
+  background: var(--chassis-sunk);
+  flex: none;
+}
+
+.panel-head .count {
+  margin-left: auto;
+  color: var(--paper-faint);
+}
+
+.panel-body {
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
+  scrollbar-width: thin;
+  scrollbar-color: var(--rule-bright) transparent;
+}
+
+/* ── transcript ──────────────────────────────────────────────────────── */
+
+.transcript {
+  padding: 20px 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.utterance {
+  display: grid;
+  grid-template-columns: 62px minmax(0, 1fr);
+  gap: 14px;
+  animation: settle 0.32s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+@keyframes settle {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+}
+
+.who {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--paper-faint);
+  padding-top: 3px;
+  text-align: right;
+}
+
+.utterance.buyer .who {
+  color: var(--paper-dim);
+}
+
+.said {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.utterance.buyer .said {
+  color: var(--paper-dim);
+  border-left: 2px solid var(--rule-bright);
+  padding-left: 12px;
+  margin-left: -14px;
+}
+
+.utterance.agent .said {
+  color: var(--paper);
+}
+
+/* An injected span, marked in place. Verbatim — never paraphrased. */
+mark.evidence {
+  background: transparent;
+  color: var(--oxide);
+  border-bottom: 1px dashed var(--oxide-dim);
+  padding-bottom: 1px;
+}
+
+.verdict {
+  grid-column: 2;
+  margin-top: 9px;
+  border: 1px solid var(--rule);
+  border-left-width: 2px;
+  background: var(--chassis-raised);
+  padding: 10px 13px;
+  font-size: 11.5px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.verdict.signed {
+  border-left-color: var(--amber);
+}
+.verdict.refused {
+  border-left-color: var(--oxide);
+}
+
+.verdict-head {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: 10px;
+}
+
+.verdict.signed .verdict-head {
+  color: var(--amber);
+}
+.verdict.refused .verdict-head {
+  color: var(--oxide);
+}
+
+.verdict-amount {
+  margin-left: auto;
+  font-size: 14px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--paper);
+}
+
+.clause {
+  color: var(--paper-dim);
+}
+.clause b {
+  color: var(--paper);
+  font-weight: 400;
+}
+
+/* ── instruments ─────────────────────────────────────────────────────── */
+
+.instruments {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.readout {
+  padding: 13px 18px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.readout-label {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--paper-faint);
+  margin-bottom: 7px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.readout-label .aside {
+  margin-left: auto;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.big {
+  font-size: 30px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.big .unit {
+  font-size: 14px;
+  color: var(--paper-faint);
+  margin-left: 3px;
+}
+
+.big.amber {
+  color: var(--amber);
+}
+.big.oxide {
+  color: var(--oxide);
+}
+
+/* Meter: a filled bar over a hairline track. */
+.meter {
+  height: 6px;
+  background: var(--chassis-sunk);
+  border: 1px solid var(--rule);
+  position: relative;
+  overflow: hidden;
+}
+
+.meter-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  transition: width 0.55s cubic-bezier(0.3, 0.8, 0.3, 1), background 0.4s;
+}
+
+.meter-fill.amber {
+  background: linear-gradient(90deg, var(--amber-dim), var(--amber));
+}
+.meter-fill.oxide {
+  background: linear-gradient(90deg, var(--oxide-dim), var(--oxide));
+}
+
+/* Threshold ticks on the pressure meter. */
+.meter-tick {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 1px;
+  background: var(--paper-faint);
+}
+
+.meter-scale {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9.5px;
+  color: var(--paper-faint);
+  margin-top: 5px;
+  letter-spacing: 0.05em;
+}
+
+/* Ratchet: three states, and it only ever moves one way. */
+.ratchet {
+  display: flex;
+  gap: 3px;
+  margin-top: 9px;
+}
+
+.detent {
+  flex: 1;
+  padding: 5px 0 4px;
+  text-align: center;
+  font-size: 9.5px;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  border: 1px solid var(--rule);
+  color: var(--paper-faint);
+  background: var(--chassis-sunk);
+  transition: all 0.35s;
+}
+
+.detent.passed {
+  color: var(--paper-faint);
+  border-color: var(--rule-bright);
+}
+
+.detent.current {
+  color: var(--chassis);
+  background: var(--amber);
+  border-color: var(--amber);
+}
+
+.detent.current.locked {
+  background: var(--oxide);
+  border-color: var(--oxide);
+  animation: latch 0.5s ease-out;
+}
+
+@keyframes latch {
+  0% {
+    transform: scale(1.05);
+    filter: brightness(1.7);
+  }
+}
+
+/* ── clause table ────────────────────────────────────────────────────── */
+
+.clauses {
+  padding: 12px 18px 15px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.clause-row {
+  display: flex;
+  gap: 10px;
+  padding: 3.5px 0;
+  font-size: 11.5px;
+  border-bottom: 1px dotted var(--rule);
+}
+
+.clause-row:last-child {
+  border-bottom: none;
+}
+
+.clause-row .name {
+  color: var(--paper-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.clause-row .value {
+  margin-left: auto;
+  color: var(--paper-dim);
+  flex: none;
+}
+
+.clause-row.binding .name,
+.clause-row.binding .value {
+  color: var(--amber);
+}
+
+.clause-row.void .name,
+.clause-row.void .value {
+  color: var(--oxide);
+  text-decoration: line-through;
+  text-decoration-color: var(--oxide-dim);
+}
+
+/* ── ledger ──────────────────────────────────────────────────────────── */
+
+.ledger {
+  grid-column: 1 / -1;
+  border-top: 1px solid var(--rule);
+  background: var(--chassis-sunk);
+  max-height: 30vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.ledger-body {
+  overflow-y: auto;
+  padding: 4px 0 10px;
+  font-size: 11.5px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 74px 150px minmax(0, 1fr) 150px 108px;
+  gap: 14px;
+  padding: 5px 22px;
+  border-bottom: 1px solid #16130f;
+  align-items: baseline;
+  animation: settle 0.3s ease-out both;
+}
+
+.row .seq {
+  color: var(--paper-faint);
+}
+.row .action {
+  color: var(--paper);
+}
+.row .cite {
+  color: var(--paper-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.row .amount {
+  text-align: right;
+  color: var(--paper);
+}
+.row .hash {
+  color: var(--cyan-dim);
+  text-align: right;
+}
+
+.row.refused .action {
+  color: var(--oxide);
+}
+.row.incident {
+  background: rgba(212, 85, 60, 0.07);
+}
+.row.incident .action {
+  color: var(--oxide);
+}
+
+.chain-state {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--cyan);
+}
+
+/* ── controls ────────────────────────────────────────────────────────── */
+
+.composer {
+  border-top: 1px solid var(--rule);
+  background: var(--chassis-raised);
+  padding: 11px 18px 13px;
+  flex: none;
+}
+
+.personas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 9px;
+}
+
+.persona {
+  font: inherit;
+  font-size: 10.5px;
+  letter-spacing: 0.03em;
+  padding: 4px 9px;
+  background: transparent;
+  color: var(--paper-dim);
+  border: 1px solid var(--rule-bright);
+  cursor: pointer;
+  transition: all 0.16s;
+}
+
+.persona:hover {
+  color: var(--paper);
+  border-color: var(--paper-faint);
+}
+
+.persona.hostile {
+  color: var(--oxide);
+  border-color: var(--oxide-dim);
+}
+
+.persona.hostile:hover {
+  background: rgba(212, 85, 60, 0.1);
+}
+
+.composer-line {
+  display: flex;
+  gap: 8px;
+}
+
+textarea {
+  flex: 1;
+  font: inherit;
+  background: var(--chassis-sunk);
+  color: var(--paper);
+  border: 1px solid var(--rule-bright);
+  padding: 8px 11px;
+  resize: none;
+  min-height: 54px;
+  outline: none;
+}
+
+textarea:focus {
+  border-color: var(--paper-faint);
+}
+
+textarea::placeholder {
+  color: var(--paper-faint);
+}
+
+button.send {
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  padding: 0 17px;
+  background: var(--amber);
+  color: var(--chassis);
+  border: none;
+  cursor: pointer;
+  transition: filter 0.16s;
+}
+
+button.send:hover:not(:disabled) {
+  filter: brightness(1.13);
+}
+
+button.send:disabled {
+  background: var(--rule-bright);
+  color: var(--paper-faint);
+  cursor: not-allowed;
+}
+
+/* ── badges ──────────────────────────────────────────────────────────── */
+
+.badge {
+  font-size: 9.5px;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  padding: 2.5px 7px;
+  border: 1px solid var(--rule-bright);
+  color: var(--paper-dim);
+  white-space: nowrap;
+}
+
+.badge.live {
+  color: var(--amber);
+  border-color: var(--amber-dim);
+}
+.badge.sim {
+  color: var(--paper-faint);
+}
+.badge.proof {
+  color: var(--cyan);
+  border-color: var(--cyan-dim);
+}
+.badge.alarm {
+  color: var(--oxide);
+  border-color: var(--oxide);
+}
+
+.dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  display: inline-block;
+  background: currentColor;
+}
+
+.dot.pulse {
+  animation: pulse 1.9s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+/* ── collapse: the whole chassis changes state ───────────────────────── */
+
+.console.collapsed .masthead,
+.console.collapsed .panel-head {
+  border-bottom-color: var(--oxide-dim);
+}
+
+.console.collapsed::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9998;
+  box-shadow: inset 0 0 0 1px var(--oxide-dim), inset 0 0 90px rgba(212, 85, 60, 0.07);
+  animation: alarm 0.7s ease-out;
+}
+
+@keyframes alarm {
+  0% {
+    box-shadow: inset 0 0 0 2px var(--oxide), inset 0 0 200px rgba(212, 85, 60, 0.28);
+  }
+}
+
+.empty {
+  padding: 34px 22px;
+  color: var(--paper-faint);
+  font-size: 12px;
+  line-height: 1.75;
+  max-width: 56ch;
+}
+
+.empty b {
+  color: var(--paper-dim);
+  font-weight: 400;
+}

@@ -12,14 +12,14 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { evaluateQuote } from '../../src/gate/evaluate.js';
-import type { OfferBody, QuoteProposal, SignedOffer } from '../../src/gate/offer.js';
-import { OFFER_VERSION } from '../../src/gate/offer.js';
-import type { Signature } from '../../src/crypto/sign.js';
-import { signPayload, verifySigned } from '../../src/crypto/sign.js';
-import type { JsonObject } from '../../src/crypto/canonical.js';
-import { generateKeyPair, publicKeyRef } from '../../src/crypto/keys.js';
-import { contextWith, gateKey } from './fixtures.js';
+import { evaluateQuote } from '../../src/gate/evaluate';
+import type { OfferBody, QuoteProposal, SignedOffer } from '../../src/gate/offer';
+import { OFFER_VERSION } from '../../src/gate/offer';
+import type { Signature } from '../../src/crypto/sign';
+import { signPayload, verifySigned } from '../../src/crypto/sign';
+import type { JsonObject } from '../../src/crypto/canonical';
+import { generateKeyPair, publicKeyRef } from '../../src/crypto/keys';
+import { contextWith, gateKey } from './fixtures';
 
 const proposal: QuoteProposal = {
   kind: 'quote',

@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { evaluateQuote, evaluateRefund } from '../../src/gate/evaluate.js';
-import type { QuoteProposal, RefundProposal } from '../../src/gate/offer.js';
-import { publicKeyRef, generateKeyPair } from '../../src/crypto/keys.js';
-import { verifySigned } from '../../src/crypto/sign.js';
-import type { JsonObject } from '../../src/crypto/canonical.js';
-import { reducePressure, INITIAL_PRESSURE } from '../../src/pressure/reduce.js';
-import { runDetectors } from '../../src/pressure/detectors.js';
-import { commit, reserve } from '../../src/budget/ledger.js';
-import { rupeesToPaise } from '../../src/money.js';
+import { evaluateQuote, evaluateRefund } from '../../src/gate/evaluate';
+import type { QuoteProposal, RefundProposal } from '../../src/gate/offer';
+import { publicKeyRef, generateKeyPair } from '../../src/crypto/keys';
+import { verifySigned } from '../../src/crypto/sign';
+import type { JsonObject } from '../../src/crypto/canonical';
+import { reducePressure, INITIAL_PRESSURE } from '../../src/pressure/reduce';
+import { runDetectors } from '../../src/pressure/detectors';
+import { commit, reserve } from '../../src/budget/ledger';
+import { rupeesToPaise } from '../../src/money';
 import {
   NOW,
   contextWith,
@@ -15,7 +15,7 @@ import {
   gateKey,
   mandateWith,
   merchantKey,
-} from './fixtures.js';
+} from './fixtures';
 
 function quote(overrides: Partial<QuoteProposal> = {}): QuoteProposal {
   return {

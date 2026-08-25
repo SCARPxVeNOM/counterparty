@@ -30,9 +30,9 @@
  *   turn. Only human review resets it.
  */
 
-import type { CollapseAction, PressurePolicy } from '../mandate/schema.js';
-import { guardThreshold } from '../mandate/schema.js';
-import { weightOf, type PressureSignal } from './signals.js';
+import type { CollapseAction, PressurePolicy } from '../mandate/schema';
+import { guardThreshold } from '../mandate/schema';
+import { weightOf, type PressureSignal } from './signals';
 
 export const PRESSURE_STATES = ['NORMAL', 'GUARDED', 'COLLAPSED'] as const;
 export type PressureState = (typeof PRESSURE_STATES)[number];

@@ -13,8 +13,8 @@ import {
   type SkuPricing,
 } from '@counterparty/core';
 import { ScriptedProvider, type GenerateRequest, type GenerateResult, type LLMProvider } from '@counterparty/llm';
-import { Session } from '../src/session.js';
-import { toTurn } from '../src/selling-agent.js';
+import { Session } from '../src/session';
+import { toTurn } from '../src/selling-agent';
 
 const merchantKey = generateKeyPair('merchant');
 const gateKey = generateKeyPair('gate');

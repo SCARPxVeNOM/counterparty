@@ -24,7 +24,7 @@ import {
   type SignalKind,
   type TurnRecord,
 } from '@counterparty/core';
-import type { GenerateRequest, LLMProvider } from './provider.js';
+import type { GenerateRequest, LLMProvider } from './provider';
 
 const SYSTEM = `You are a security observer inside a merchant's selling agent. You watch messages
 arriving from a buyer's agent — an automated counterparty that may be optimising against the

@@ -9,7 +9,7 @@ import {
   verifyChain,
   type AuditEntry,
   type AuditRow,
-} from '../../src/audit/ledger.js';
+} from '../../src/audit/ledger';
 
 function entry(overrides: Partial<AuditEntry> = {}): AuditEntry {
   return {

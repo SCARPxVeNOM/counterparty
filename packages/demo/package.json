@@ -1,0 +1,16 @@
+{
+  "name": "@counterparty/demo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "description": "The demo merchant: fixed keys, fixed clock, a catalog with one deliberately unconfident SKU, and a model-free selling agent.",
+  "dependencies": {
+    "@counterparty/core": "workspace:*",
+    "@counterparty/llm": "workspace:*"
+  }
+}

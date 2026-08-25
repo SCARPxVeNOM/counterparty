@@ -5,17 +5,17 @@ export {
   type GenerateResult,
   type LLMProvider,
   type LlmMessage,
-} from './provider.js';
+} from './provider';
 
-export { GeminiProvider } from './gemini.js';
+export { GeminiProvider } from './gemini';
 
 export {
   CassetteProvider,
   ScriptedProvider,
   cassetteKey,
   type CassetteMode,
-} from './cassette.js';
+} from './cassette';
 
-export { classifyPressure, toSignals, type ClassifyInput } from './classifier.js';
+export { classifyPressure, toSignals, type ClassifyInput } from './classifier';
 
-export { createProvider, type ProviderChoice } from './factory.js';
+export { createProvider, type ProviderChoice } from './factory';

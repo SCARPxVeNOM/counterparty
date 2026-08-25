@@ -13,16 +13,16 @@
  * correctly signed document that no longer grants anything.
  */
 
-import { signPayload, verifySigned, type VerifyFailure } from '../crypto/sign.js';
-import type { JsonObject } from '../crypto/canonical.js';
-import type { KeyPair, PublicKeyRef } from '../crypto/keys.js';
-import { paise, rupeesToPaise, type Paise } from '../money.js';
+import { signPayload, verifySigned, type VerifyFailure } from '../crypto/sign';
+import type { JsonObject } from '../crypto/canonical';
+import type { KeyPair, PublicKeyRef } from '../crypto/keys';
+import { paise, rupeesToPaise, type Paise } from '../money';
 import {
   SellingMandateSchema,
   UnsignedMandateSchema,
   type SellingMandate,
   type UnsignedMandate,
-} from './schema.js';
+} from './schema';
 
 export class MandateError extends Error {
   override readonly name = 'MandateError';

@@ -19,7 +19,7 @@
  * apart means a clause change never risks corrupting the ledger.
  */
 
-import { ZERO, addPaise, paise, subPaise, type Paise } from '../money.js';
+import { ZERO, addPaise, paise, subPaise, type Paise } from '../money';
 
 export const BUDGET_PURPOSES = ['negotiation', 'campaign'] as const;
 export type BudgetPurpose = (typeof BUDGET_PURPOSES)[number];

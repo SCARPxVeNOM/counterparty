@@ -12,7 +12,7 @@
  * debugging than a generic wrapper.
  */
 
-import { RailsError } from './types.js';
+import { RailsError } from './types';
 
 export interface RazorpayCredentials {
   readonly keyId: string;

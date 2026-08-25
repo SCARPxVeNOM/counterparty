@@ -17,7 +17,7 @@
  */
 
 import { z } from 'zod';
-import { rupeesToPaise, type Paise } from '../money.js';
+import { rupeesToPaise, type Paise } from '../money';
 
 export const ProvenanceSchema = z.object({
   source_url: z.string().min(1),

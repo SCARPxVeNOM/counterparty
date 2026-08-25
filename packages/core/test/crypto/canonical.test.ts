@@ -5,7 +5,7 @@ import {
   CanonicalizationError,
   type JsonObject,
   type JsonValue,
-} from '../../src/crypto/canonical.js';
+} from '../../src/crypto/canonical';
 
 describe('canonicalize — member ordering', () => {
   it('sorts object members', () => {

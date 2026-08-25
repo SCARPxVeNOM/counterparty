@@ -11,8 +11,8 @@
  * discount has replaced one failure mode with a more expensive one.
  */
 
-import type { SignalKind } from '../../src/pressure/signals.js';
-import type { TurnRecord } from '../../src/pressure/detectors.js';
+import type { SignalKind } from '../../src/pressure/signals';
+import type { TurnRecord } from '../../src/pressure/detectors';
 
 export interface SingleTurnCase {
   readonly name: string;

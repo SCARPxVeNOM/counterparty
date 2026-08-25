@@ -27,7 +27,7 @@ import {
   type GenerateRequest,
   type GenerateResult,
   type LLMProvider,
-} from './provider.js';
+} from './provider';
 
 export type CassetteMode = 'replay' | 'record' | 'passthrough';
 

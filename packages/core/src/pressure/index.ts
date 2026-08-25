@@ -8,7 +8,7 @@ export {
   type PressureSignal,
   type SignalKind,
   type SignalSource,
-} from './signals.js';
+} from './signals';
 
 export {
   containsPriceAsk,
@@ -18,7 +18,7 @@ export {
   runDetectors,
   type DetectorInput,
   type TurnRecord,
-} from './detectors.js';
+} from './detectors';
 
 export {
   INITIAL_PRESSURE,
@@ -32,4 +32,4 @@ export {
   type PressureSnapshot,
   type PressureState,
   type PressureVerdict,
-} from './reduce.js';
+} from './reduce';

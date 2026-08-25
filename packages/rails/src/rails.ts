@@ -26,8 +26,8 @@ import {
   type RawPaymentLink,
   type RawRefund,
   type RawSubscription,
-} from './client.js';
-import { toPayment } from './authorize.js';
+} from './client';
+import { toPayment } from './authorize';
 import {
   RailsError,
   type Authorizer,
@@ -38,7 +38,7 @@ import {
   type RazorpayRefund,
   type RazorpaySubscription,
   type Settlement,
-} from './types.js';
+} from './types';
 
 export interface RailsOptions {
   readonly client: RazorpayClient;

@@ -17,4 +17,4 @@ export {
   type Protocol,
   type Provenance,
   type SkuPricing,
-} from './schema.js';
+} from './schema';

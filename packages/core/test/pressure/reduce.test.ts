@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { runDetectors } from '../../src/pressure/detectors.js';
+import { runDetectors } from '../../src/pressure/detectors';
 import {
   INITIAL_PRESSURE,
   combine,
@@ -8,10 +8,10 @@ import {
   resetAfterHumanReview,
   stateForScore,
   type PressureSnapshot,
-} from '../../src/pressure/reduce.js';
-import { SIGNAL_KINDS, signal, weightOf, type PressureSignal } from '../../src/pressure/signals.js';
-import type { PressurePolicy } from '../../src/mandate/schema.js';
-import { SINGLE_TURN_CATEGORIES } from './corpus.js';
+} from '../../src/pressure/reduce';
+import { SIGNAL_KINDS, signal, weightOf, type PressureSignal } from '../../src/pressure/signals';
+import type { PressurePolicy } from '../../src/mandate/schema';
+import { SINGLE_TURN_CATEGORIES } from './corpus';
 
 const policy: PressurePolicy = {
   collapse_threshold: 0.7,

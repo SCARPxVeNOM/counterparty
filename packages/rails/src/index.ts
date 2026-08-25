@@ -12,15 +12,15 @@ export {
   type RazorpayRefund,
   type RazorpaySubscription,
   type Settlement,
-} from './types.js';
+} from './types';
 
 export {
   RazorpayClient,
   type Exchange,
   type RazorpayClientOptions,
   type RazorpayCredentials,
-} from './client.js';
+} from './client';
 
-export { LiveAuthorizer, SimAuthorizer, toPayment } from './authorize.js';
+export { LiveAuthorizer, SimAuthorizer, toPayment } from './authorize';
 
-export { Rails, type RailsOptions } from './rails.js';
+export { Rails, type RailsOptions } from './rails';

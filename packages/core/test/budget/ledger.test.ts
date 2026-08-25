@@ -13,8 +13,8 @@ import {
   reserved,
   spent,
   type BudgetState,
-} from '../../src/budget/ledger.js';
-import { rupeesToPaise } from '../../src/money.js';
+} from '../../src/budget/ledger';
+import { rupeesToPaise } from '../../src/money';
 
 const LIMIT = rupeesToPaise(40000);
 const NOW = new Date('2026-08-25T09:00:00+05:30');

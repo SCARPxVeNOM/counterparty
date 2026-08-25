@@ -6,9 +6,9 @@ import {
   weightOf,
   type PressurePolicy,
 } from '@counterparty/core';
-import { classifyPressure, toSignals } from '../src/classifier.js';
-import { ScriptedProvider } from '../src/cassette.js';
-import { UnavailableProvider } from '../src/provider.js';
+import { classifyPressure, toSignals } from '../src/classifier';
+import { ScriptedProvider } from '../src/cassette';
+import { UnavailableProvider } from '../src/provider';
 
 const policy: PressurePolicy = {
   collapse_threshold: 0.7,

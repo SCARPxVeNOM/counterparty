@@ -18,10 +18,10 @@
  */
 
 import { createHash } from 'node:crypto';
-import { canonicalize, type JsonObject } from '../crypto/canonical.js';
-import { formatInr, formatPct, rupeesToPaise } from '../money.js';
-import type { ClausePath } from '../mandate/schema.js';
-import type { PostAuthReason, SettlementPath } from '../gate/offer.js';
+import { canonicalize, type JsonObject } from '../crypto/canonical';
+import { formatInr, formatPct, rupeesToPaise } from '../money';
+import type { ClausePath } from '../mandate/schema';
+import type { PostAuthReason, SettlementPath } from '../gate/offer';
 
 /**
  * The twelve money actions from §8, plus the two kinds of row that are not

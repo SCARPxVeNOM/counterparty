@@ -9,9 +9,9 @@
  * that what the pitch shows and what the code runs are the same document.
  */
 
-import type { PublicKeyRef } from '../crypto/keys.js';
-import type { UnsignedMandate } from './schema.js';
-import { MANDATE_VERSION } from './schema.js';
+import type { PublicKeyRef } from '../crypto/keys';
+import type { UnsignedMandate } from './schema';
+import { MANDATE_VERSION } from './schema';
 
 export interface DraftMandateInput {
   readonly merchantId: string;
