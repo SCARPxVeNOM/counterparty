@@ -1,0 +1,32 @@
+{
+  "version": "counterparty/signed-offer/1",
+  "offer_id": "off_s4_t1",
+  "envelope_id": "env_demo_0001",
+  "merchant_id": "acc_DEMO0001",
+  "buyer_id": "buyer_s4",
+  "currency": "INR",
+  "lines": [
+    {
+      "sku": "SKU-KETTLE-1L",
+      "quantity": 1,
+      "list_unit_price_inr": 4990,
+      "offered_unit_price_inr": 4491
+    }
+  ],
+  "list_total_inr": 4990,
+  "offered_total_inr": 4490,
+  "depth_pct": 10,
+  "issued_at": "2026-08-25T03:30:00.000Z",
+  "expires_at": "2026-08-25T03:45:00.000Z",
+  "settlement_path": "pre_auth",
+  "authorized_by": "authority.max_discount_depth_pct",
+  "reservation_id": "off_s4_t1",
+  "pressure_score": 0,
+  "signature": {
+    "alg": "Ed25519",
+    "kid": "4204d9f9795ecb45",
+    "role": "gate",
+    "signed_at": "2026-08-25T03:30:00.000Z",
+    "sig": "PEOdiNPs_XCq334mP3tBiUZrlU_VMXA0lyAmziyKnVBz_S2eMne-QrVQ0N6dCf2zbvpKkPpMa9xBxYYVqSotCg"
+  }
+}

@@ -106,9 +106,19 @@ describe('formatting', () => {
     expect(formatInr(rupeesToPaise(120000))).toBe('₹1,20,000');
   });
 
-  it('shows paise only when there are any', () => {
-    expect(formatInr(rupeesToPaise(4241.5))).toBe('₹4,241.5');
+  /**
+   * Both paise digits, always. A trailing zero dropped from an amount of money
+   * reads as a rounding error to whoever is reviewing the trail.
+   */
+  it('shows paise when there are any, to two digits', () => {
+    expect(formatInr(rupeesToPaise(4241.5))).toBe('₹4,241.50');
+    expect(formatInr(rupeesToPaise(13173.6))).toBe('₹13,173.60');
+    expect(formatInr(paise(499005))).toBe('₹4,990.05');
+  });
+
+  it('omits the decimal part entirely for whole rupees', () => {
     expect(formatInr(paise(0))).toBe('₹0');
+    expect(formatInr(rupeesToPaise(4990))).toBe('₹4,990');
   });
 
   it('formats percentages to one decimal, matching the audit row format', () => {

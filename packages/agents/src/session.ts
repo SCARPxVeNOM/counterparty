@@ -86,6 +86,7 @@ export class Session {
   private ledgerState: AuditLedger = openLedger();
   private turnNumber = 0;
   private lastRefusal: Refusal | undefined;
+  private offers: SignedOffer[] = [];
 
   constructor(private readonly options: SessionOptions) {
     this.agent = new SellingAgent(options.provider, options.sellingModel);
@@ -107,6 +108,11 @@ export class Session {
 
   get transcript(): ReadonlyArray<{ speaker: 'buyer' | 'agent'; text: string }> {
     return this.history;
+  }
+
+  /** Every offer the gate signed this session, in order. */
+  get signedOffers(): readonly SignedOffer[] {
+    return this.offers;
   }
 
   async takeTurn(buyerMessage: string): Promise<TurnResult> {
@@ -251,6 +257,7 @@ export class Session {
 
     this.budgetState = decision.budget;
     const offer = decision.offer;
+    this.offers = [...this.offers, offer];
     const units = offer.lines.reduce((sum, line) => sum + line.quantity, 0);
 
     this.record({

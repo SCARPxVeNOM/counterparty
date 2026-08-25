@@ -1,0 +1,13 @@
+{
+  "name": "@counterparty/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": { "counterparty": "./src/index.ts" },
+  "description": "Independent verification: check a signed offer, an envelope, or the audit chain.",
+  "dependencies": {
+    "@counterparty/agents": "workspace:*",
+    "@counterparty/config": "workspace:*",
+    "@counterparty/core": "workspace:*"
+  }
+}

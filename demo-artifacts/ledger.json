@@ -1,0 +1,27 @@
+{
+  "rows": [
+    {
+      "at": "2026-08-25T03:30:00.000Z",
+      "action": "discount_conceded",
+      "outcome": "signed",
+      "authorized_by": "authority.max_discount_depth_pct",
+      "clause_value": 15,
+      "agent_rationale": "small concession to close today",
+      "offer_id": "off_s4_t1",
+      "buyer_id": "buyer_s4",
+      "amount_inr": 4491,
+      "list_inr": 4990,
+      "depth_pct": 10,
+      "settlement_path": "pre_auth",
+      "signature": "PEOdiNPs_XCq334mP3tBiUZrlU_VMXA0lyAmziyKnVBz_S2eMne-QrVQ0N6dCf2zbvpKkPpMa9xBxYYVqSotCg",
+      "session_id": "s4",
+      "envelope_id": "env_demo_0001",
+      "pressure_score": 0,
+      "budget_remaining_inr": 39501,
+      "budget_limit_inr": 40000,
+      "seq": 1,
+      "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "hash": "3a0c582f1a9a1a117c3925596ace331db3fe35699e6acf42f07a9e821b65edc5"
+    }
+  ]
+}

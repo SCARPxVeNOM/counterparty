@@ -1,0 +1,53 @@
+{
+  "version": "counterparty/selling-mandate/1",
+  "envelope_id": "env_demo_0001",
+  "merchant_id": "acc_DEMO0001",
+  "issued_at": "2026-08-25T03:30:00.000Z",
+  "expires_at": "2026-09-25T03:30:00.000Z",
+  "gate_key": {
+    "kid": "4204d9f9795ecb45",
+    "public_key_pem": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAwvjALEdq7/WZJMSq2Up/niWIw4rfkjC4lpU7iYTzc7Q=\n-----END PUBLIC KEY-----\n"
+  },
+  "authority": {
+    "floor_margin_pct": 18,
+    "max_discount_depth_pct": 15,
+    "eligible_skus": [
+      "SKU-*"
+    ],
+    "excluded_skus": [
+      "SKU-CLEARANCE-*"
+    ],
+    "bundle_rules": {
+      "max_items": 3,
+      "combined_depth_pct": 20
+    },
+    "refund_authority": {
+      "partial": true,
+      "full_above_inr": 0,
+      "requires_human_above_inr": 5000
+    },
+    "capture_window_hours": 72,
+    "discount_budget_inr_per_day": 40000,
+    "per_buyer_discount_cap_inr": 2000
+  },
+  "confidence_policy": {
+    "min_margin_confidence": 0.85,
+    "below_threshold_discount_depth_pct": 0
+  },
+  "pressure_policy": {
+    "collapse_threshold": 0.7,
+    "guard_threshold": 0.4,
+    "on_collapse": [
+      "depth_pct=0",
+      "log_incident",
+      "notify_human"
+    ]
+  },
+  "signature": {
+    "alg": "Ed25519",
+    "kid": "01c4052f3becbd02",
+    "role": "merchant",
+    "signed_at": "2026-08-25T03:30:00.000Z",
+    "sig": "FjTU0f5WGKbWjODJFxfh35N7-g4NlQvBiA8UHceEPRNpwjgh6FoNvzInqp5e8bMpNIYUwnrnlboY9p0KWP7OCg"
+  }
+}

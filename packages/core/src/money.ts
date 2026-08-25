@@ -105,17 +105,28 @@ function assertPct(value: number, label: string): void {
   }
 }
 
-const INR = new Intl.NumberFormat('en-IN', {
+const INR_WHOLE = new Intl.NumberFormat('en-IN', {
   minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
+});
+
+const INR_PAISE = new Intl.NumberFormat('en-IN', {
+  minimumFractionDigits: 2,
   maximumFractionDigits: 2,
 });
 
 /**
- * Indian digit grouping — ₹1,20,000 rather than ₹120,000. Whole rupees print
- * without a decimal part, matching the audit row format in the design.
+ * Indian digit grouping — ₹1,20,000 rather than ₹120,000.
+ *
+ * Whole rupees print without a decimal part, matching the audit row format in
+ * the design. Anything with paise prints BOTH digits: ₹13,173.60, never
+ * ₹13,173.6. A trailing zero dropped from an amount of money reads as a
+ * rounding error to anyone reviewing the trail, and this trail exists to be
+ * reviewed.
  */
 export function formatInr(amount: Paise): string {
-  return `₹${INR.format(amount / 100)}`;
+  const rupees = amount / 100;
+  return `₹${amount % 100 === 0 ? INR_WHOLE.format(rupees) : INR_PAISE.format(rupees)}`;
 }
 
 /** Percentages in audit rows always show one decimal place: "15.0%". */
