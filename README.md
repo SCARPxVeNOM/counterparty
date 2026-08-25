@@ -288,9 +288,26 @@ OK   settle               path=pre_auth  net=₹4,491
 
 - **Offers and Subscriptions are switched off on the test account.** Both are
   reported, not thrown — see [`docs/CORRECTIONS.md`](docs/CORRECTIONS.md) C6.
-  Note that Offers could not be created via API even if enabled: `POST /offers`
-  is 405, and Razorpay creates offers from the Dashboard only. Enable
-  Subscriptions in the Dashboard to unlock the win-back path.
+  Offers could not be created via API even if enabled: `POST /offers` is 405,
+  and Razorpay creates offers from the Dashboard only.
+
+  The Subscriptions 401 is an entitlement rejection, not a credentials one. A
+  working `/orders` call returns Razorpay's API-service headers (`X-Pam`,
+  `X-Frame-Options`) and its standard error envelope; `/plans` returns neither,
+  just a bare `{"error":"Unauthorized"}`. The request never reaches the API.
+  Enable Subscriptions under **Payment Products** in the Dashboard (some
+  accounts need support to switch it on).
+
+- **§7's win-back target is confirmed against Razorpay's own docs.** The design
+  note aims campaigns at *"subscriptions halted after four consecutive failed
+  charge attempts"* — that is exactly right, and it is reproducible in test
+  mode. The Dashboard's **Charge this now** button lets you pick failure, which
+  moves a subscription `active → pending` and fires `subscription.pending`;
+  four consecutive failures exhaust the retries, move it to `halted` and fire
+  `subscription.halted`.
+  ([Test Subscriptions](https://razorpay.com/docs/subscriptions/test-guide/))
+  So the halted cohort is a real, manufacturable segment once the product is
+  enabled — not a hypothetical.
 - **The authorize step is still simulated.** Everything upstream and downstream
   is real. To produce a genuine authorized payment, run
   `pnpm smoke:live --wait`, then pay the printed link with test card

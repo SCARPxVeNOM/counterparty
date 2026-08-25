@@ -378,11 +378,26 @@ export class Rails {
   }
 
   /**
-   * Subscriptions require the product to be enabled on the account. When it is
-   * not, `/plans` and `/subscriptions` return a bare `{"error":"Unauthorized"}`
-   * — a different shape from a credentials failure, and worth distinguishing,
-   * because "your keys are wrong" and "this product is switched off" need very
-   * different fixes.
+   * Subscriptions require the product to be provisioned on the account.
+   *
+   * When it is not, `/plans` and `/subscriptions` return a bare
+   * `{"error":"Unauthorized"}` — and the response headers are the giveaway. A
+   * working `/orders` call comes back with `X-Pam` and `X-Frame-Options` from
+   * Razorpay's API service; `/plans` carries neither, and the body is not
+   * Razorpay's standard `{error:{code,description,source,step,reason}}`
+   * envelope. The request is being turned away at an entitlement layer before
+   * it reaches the API at all.
+   *
+   * Worth distinguishing from a credentials failure, because "your keys are
+   * wrong" and "this product is switched off" need completely different fixes,
+   * and both surface as 401.
+   *
+   * Once enabled, §7's win-back segment is genuinely reachable in test mode.
+   * Razorpay's test guide documents the exact path: the Dashboard's "Charge this
+   * now" button lets you choose failure, which moves the subscription
+   * active → pending and fires `subscription.pending`; four consecutive
+   * failures exhaust the retries, move it to `halted` and fire
+   * `subscription.halted`. That halted cohort is the campaign target.
    */
   async subscriptionsAvailable(): Promise<boolean> {
     try {
