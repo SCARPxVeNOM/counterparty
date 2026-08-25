@@ -9,6 +9,7 @@ export {
 
 export {
   generateKeyPair,
+  deriveKeyPair,
   loadKeyPair,
   publicKeyRef,
   kidFromPublicKeyPem,

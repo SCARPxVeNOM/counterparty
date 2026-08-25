@@ -13,7 +13,7 @@
 import {
   draftMandate,
   issueMandate,
-  loadKeyPair,
+  deriveKeyPair,
   openBudget,
   publicKeyRef,
   rupeesToPaise,
@@ -30,14 +30,21 @@ export const DEMO_MERCHANT_ID = 'acc_DEMO0001';
 /** Fixed instant so signatures and offer ids are stable across runs. */
 export const DEMO_NOW = new Date('2026-08-25T09:00:00+05:30');
 
-// MERCHANT_PRIVATE_KEY removed from history. Demo keys are now derived from a public seed
-// label via deriveKeyPair() -- see packages/core/src/crypto/keys.ts.
-
-// GATE_PRIVATE_KEY removed from history. Demo keys are now derived from a public seed
-// label via deriveKeyPair() -- see packages/core/src/crypto/keys.ts.
-
-export const merchantKey: KeyPair = loadKeyPair('merchant', MERCHANT_PRIVATE_KEY);
-export const gateKey: KeyPair = loadKeyPair('gate', GATE_PRIVATE_KEY);
+/**
+ * Demo keys, derived from visible labels rather than stored as PEMs.
+ *
+ * Fixed keys are what make the scenario output byte-identical across runs, so
+ * it can be diffed and used as a regression test. Committing the PEM would have
+ * achieved the same thing and did — until GitGuardian correctly flagged it. A
+ * committed private key block is indistinguishable from a real leak until
+ * someone reads the comment next to it, and training people to scroll past that
+ * warning is a worse habit than the convenience is worth.
+ *
+ * These seeds are public and so are the keys they produce. They sign demo
+ * artifacts and nothing else.
+ */
+export const merchantKey: KeyPair = deriveKeyPair('merchant', 'counterparty-demo-merchant-v1');
+export const gateKey: KeyPair = deriveKeyPair('gate', 'counterparty-demo-gate-v1');
 
 /**
  * The catalog.
