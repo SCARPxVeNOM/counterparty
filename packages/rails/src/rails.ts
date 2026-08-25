@@ -292,27 +292,105 @@ export class Rails {
     };
   }
 
-  /** Campaign offer. Same envelope, same gate, one-to-many addressing. */
-  async createOffer(input: {
-    readonly name: string;
-    readonly displayText: string;
-    readonly percentOff: number;
-    readonly startsAt: Date;
-    readonly endsAt: Date;
-  }): Promise<RazorpayOffer> {
-    const raw = await this.client.post<RawOffer>('/offers', {
-      name: input.name.slice(0, 40),
-      payment_method: 'card',
-      display_text: input.displayText,
-      terms: 'Issued under a Counterparty selling mandate',
-      starts_at: Math.floor(input.startsAt.getTime() / 1000),
-      ends_at: Math.floor(input.endsAt.getTime() / 1000),
-      type: 'instant',
-      value_type: 'percentage',
-      // Razorpay expresses percentage offers in basis points.
-      value: Math.round(input.percentOff * 100),
+  /**
+   * Offers that already exist on the merchant's account.
+   *
+   * READ ONLY, AND NOT BY CHOICE. Razorpay has no create-offer API — `POST
+   * /offers` returns 405, and the docs are explicit that offers are created
+   * from the Dashboard. See docs/CORRECTIONS.md C6.
+   *
+   * So a campaign cannot mint its own discount object. What it can do is draw
+   * on one the merchant already authorized by hand, which is arguably the
+   * better shape for this system anyway: a Dashboard-created offer is itself a
+   * merchant act, so referencing one keeps the chain of authority intact rather
+   * than letting the agent conjure a discount object out of nothing.
+   */
+  async listOffers(): Promise<RazorpayOffer[]> {
+    const raw = await this.client.get<{ items?: RawOffer[] }>('/offers');
+    return (raw.items ?? []).map((offer) => ({
+      id: offer.id,
+      name: offer.name,
+      value_pct: offer.value / 100,
+      simulated: false,
+    }));
+  }
+
+  /**
+   * Whether the Offers API is usable on this account at all.
+   *
+   * On a plain test account `GET /offers` returns `BAD_REQUEST / Request
+   * Validation Failure` with no `reason`, `source` or `step` — nothing to act
+   * on. Offers appear to need the feature enabled before the endpoint accepts
+   * anything. Reported rather than thrown: a campaign does not need an offer
+   * object to run, it needs a signed price, and refusing to run a campaign
+   * because a presentation detail is unavailable would be the wrong failure.
+   */
+  async offersAvailable(): Promise<boolean> {
+    try {
+      await this.client.get('/offers');
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Campaign execution: a payment link at the gate-signed price, optionally
+   * carrying a Dashboard-created offer id.
+   *
+   * The discount authority comes from the mandate and the gate, exactly as it
+   * does in a one-to-one negotiation — only the addressing changes. The Razorpay
+   * offer id, when there is one, is a presentation detail on top of a price the
+   * gate already signed.
+   */
+  async createCampaignLink(offer: SignedOffer, razorpayOfferId?: string): Promise<PaymentLink> {
+    this.assertSigned(offer);
+    const raw = await this.client.post<RawPaymentLink>('/payment_links', {
+      amount: rupeesToPaise(offer.offered_total_inr),
+      currency: 'INR',
+      description: `Offer ${offer.offer_id}`,
+      /**
+       * Razorpay enforces `reference_id` uniqueness per account, so a campaign
+       * link and a negotiation link for the same signed offer would collide.
+       * Suffixed rather than randomised: the collision is a useful property to
+       * keep — retrying a link for an offer that already has one should fail,
+       * because two live links for one authorization is two ways to get paid
+       * for the same signed price.
+       */
+      reference_id: `${offer.offer_id}-campaign`,
+      notify: { sms: false, email: false },
+      reminder_enable: false,
+      ...(razorpayOfferId === undefined ? {} : { offer_id: razorpayOfferId }),
+      notes: {
+        offer_id: offer.offer_id,
+        envelope_id: offer.envelope_id,
+        authorized_by: offer.authorized_by,
+        campaign: 'true',
+      },
     });
-    return { id: raw.id, name: raw.name, value_pct: raw.value / 100, simulated: false };
+    return {
+      id: raw.id,
+      short_url: raw.short_url,
+      amount_paise: raw.amount,
+      status: raw.status,
+      simulated: false,
+    };
+  }
+
+  /**
+   * Subscriptions require the product to be enabled on the account. When it is
+   * not, `/plans` and `/subscriptions` return a bare `{"error":"Unauthorized"}`
+   * — a different shape from a credentials failure, and worth distinguishing,
+   * because "your keys are wrong" and "this product is switched off" need very
+   * different fixes.
+   */
+  async subscriptionsAvailable(): Promise<boolean> {
+    try {
+      await this.client.get('/plans?count=1');
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async createSubscription(input: {

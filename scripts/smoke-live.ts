@@ -138,30 +138,47 @@ async function main(): Promise<void> {
   const link = await attempt('payment_links.create', () => rails.createPaymentLink(offer));
   if (link !== null) step('payment_links.create', `${link.id}  ${link.short_url}`);
 
-  const campaignOffer = await attempt('offers.create', () =>
-    rails.createOffer({
-      name: `CP smoke ${Date.now().toString(36)}`,
-      displayText: '12% off',
-      percentOff: 12,
-      startsAt: new Date(Date.now() + 60_000),
-      endsAt: new Date(Date.now() + 86_400_000),
-    }),
-  );
-  if (campaignOffer !== null) step('offers.create', `${campaignOffer.id}  ${campaignOffer.value_pct}%`);
+  // Campaign: a payment link at the gate-signed price. Razorpay has no
+  // create-offer API (405 on POST /offers — see CORRECTIONS C6), so a campaign
+  // draws on offers the merchant created in the Dashboard, if any.
+  const campaignLink = await attempt('campaign link', () => rails.createCampaignLink(offer));
+  if (campaignLink !== null) step('campaign link', `${campaignLink.id}  ${campaignLink.short_url}`);
 
-  const plan = await attempt('plans.create', () =>
-    client.post<{ id: string }>('/plans', {
-      period: 'monthly',
-      interval: 1,
-      item: { name: `CP smoke plan ${Date.now().toString(36)}`, amount: 49900, currency: 'INR' },
-    }),
-  );
-  if (plan !== null) {
-    step('plans.create', plan.id);
-    const subscription = await attempt('subscriptions.create', () =>
-      rails.createSubscription({ planId: plan.id, totalCount: 12 }),
+  if (await rails.offersAvailable()) {
+    const existingOffers = await attempt('offers.list', () => rails.listOffers());
+    if (existingOffers !== null) {
+      step(
+        'offers.list',
+        existingOffers.length === 0
+          ? 'none yet — create one in the Dashboard to attach it to a campaign'
+          : existingOffers.map((o) => `${o.id} (${o.value_pct}%)`).join(', '),
+      );
+    }
+  } else {
+    console.log(
+      `  ${'SKIP'.padEnd(5)}${'offers'.padEnd(30)} Offers API not enabled on this account (no create API exists either)`,
     );
-    if (subscription !== null) step('subscriptions.create', `${subscription.id}  status=${subscription.status}`);
+  }
+
+  if (await rails.subscriptionsAvailable()) {
+    const plan = await attempt('plans.create', () =>
+      client.post<{ id: string }>('/plans', {
+        period: 'monthly',
+        interval: 1,
+        item: { name: `CP smoke plan ${Date.now().toString(36)}`, amount: 49900, currency: 'INR' },
+      }),
+    );
+    if (plan !== null) {
+      step('plans.create', plan.id);
+      const subscription = await attempt('subscriptions.create', () =>
+        rails.createSubscription({ planId: plan.id, totalCount: 12 }),
+      );
+      if (subscription !== null) step('subscriptions.create', `${subscription.id}  status=${subscription.status}`);
+    }
+  } else {
+    console.log(
+      `  ${'SKIP'.padEnd(5)}${'subscriptions'.padEnd(30)} not enabled on this account — enable Subscriptions in the Dashboard`,
+    );
   }
 
   // --- authorize, capture, refund -----------------------------------------

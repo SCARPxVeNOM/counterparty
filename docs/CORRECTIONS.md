@@ -141,6 +141,53 @@ live demo that has to fire on the night.
 
 ---
 
+## C6 — Razorpay has no create-offer API
+
+**Design note §7** says the campaign path is native: *"Razorpay supplies the
+pieces natively: create an Offer, generate payment links for the segment."*
+
+Half of that is right. There is no create-offer API.
+
+```
+POST /offers  ->  405 Method Not Allowed
+GET  /offers  ->  400 BAD_REQUEST / "Request Validation Failure"
+                  (source: NA, step: NA, reason: NA — nothing to act on)
+```
+
+Razorpay's docs confirm it: offers are created *from the Dashboard*, and the
+API only lets you reference an existing `offer_id` when creating an order,
+payment link or subscription.
+Sources: [Create Offers](https://razorpay.com/docs/payments/offers/create/),
+[Offers on Payment Links](https://razorpay.com/docs/api/payments/payment-links/offers/).
+
+### The replacement
+
+A campaign executes as a **payment link at the gate-signed price**, optionally
+carrying an `offer_id` the merchant created by hand.
+
+This is arguably the better shape. A Dashboard-created offer is itself a
+merchant act, so referencing one keeps the chain of authority intact, whereas an
+agent minting its own discount object out of nothing is exactly the move this
+system exists to make impossible. The discount authority still comes from the
+mandate and the gate — only the addressing changes, which is what §7 claimed all
+along. The Razorpay offer object was never where the authority lived.
+
+`offersAvailable()` and `subscriptionsAvailable()` report rather than throw. A
+campaign does not need an offer object to run; it needs a signed price. Refusing
+to run one because a presentation detail is unavailable would be the wrong
+failure.
+
+**Also found:** `reference_id` is unique per account, so a campaign link and a
+negotiation link for the same signed offer collide. Suffixed rather than
+randomised — the collision is worth keeping, because two live links for one
+authorization is two ways to get paid for the same signed price.
+
+**Account state at time of writing:** Offers and Subscriptions are both switched
+off on the test account. Orders, Payment Links, Payments, Refunds, Customers and
+Settlements all work.
+
+---
+
 ## C5 — Two clauses in §4's envelope are unreachable as written
 
 Not errors — the reference envelope is coherent and every clause validates. But

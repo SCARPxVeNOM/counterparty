@@ -417,19 +417,50 @@ describe('the live authorizer', () => {
   });
 });
 
-describe('campaign offers', () => {
-  it('converts a percentage to the basis points Razorpay expects', async () => {
-    const { rails, calls } = railsWith({ '/offers': { id: 'offer_1', name: 'Win-back', value: 1200 } });
-    const offer = await rails.createOffer({
-      name: 'Win-back',
-      displayText: '12% off',
-      percentOff: 12,
-      startsAt: NOW,
-      endsAt: new Date(NOW.getTime() + 86_400_000),
+describe('campaigns', () => {
+  /**
+   * Razorpay has no create-offer API — POST /offers returns 405 and the docs
+   * are explicit that offers are Dashboard-only (CORRECTIONS C6). So a campaign
+   * executes as a payment link at the price the gate signed, and any Razorpay
+   * offer it carries is one the merchant already authorized by hand.
+   */
+  it('executes as a payment link at the gate-signed price', async () => {
+    const { rails, calls } = railsWith({
+      '/payment_links': { id: 'plink_c1', short_url: 'https://rzp.io/i/camp', amount: 449100, status: 'created' },
     });
+    const signed = signedOffer(10);
+    const link = await rails.createCampaignLink(signed);
 
-    expect(calls[0]?.body.value).toBe(1200);
-    expect(offer.value_pct).toBe(12);
+    expect(link.id).toBe('plink_c1');
+    expect(calls[0]?.body.amount).toBe(rupeesToPaise(signed.offered_total_inr));
+    expect(calls[0]?.body.notes.campaign).toBe('true');
+    expect(calls[0]?.body.notes.authorized_by).toBe(signed.authorized_by);
+  });
+
+  it('attaches a Dashboard-created offer when the merchant has one', async () => {
+    const { rails, calls } = railsWith({
+      '/payment_links': { id: 'plink_c2', short_url: 'https://rzp.io/i/camp2', amount: 449100, status: 'created' },
+    });
+    await rails.createCampaignLink(signedOffer(10), 'offer_DASHBOARD1');
+    expect(calls[0]?.body.offer_id).toBe('offer_DASHBOARD1');
+  });
+
+  it('refuses an unsigned campaign offer just like a negotiated one', async () => {
+    const { rails, calls } = railsWith({ '/payment_links': {} });
+    const forged = { ...signedOffer(), offered_total_inr: 1 } as unknown as SignedOffer;
+    await expect(rails.createCampaignLink(forged)).rejects.toThrow(/failed signature verification/);
+    expect(calls).toHaveLength(0);
+  });
+
+  it('reads offers the merchant already created', async () => {
+    const { rails } = railsWith({ '/offers': { items: [{ id: 'offer_1', name: 'Win-back', value: 1200 }] } });
+    const offers = await rails.listOffers();
+    expect(offers).toEqual([{ id: 'offer_1', name: 'Win-back', value_pct: 12, simulated: false }]);
+  });
+
+  it('reports subscriptions as unavailable when the product is switched off', async () => {
+    const { rails } = railsWith({}, ['/plans?count=1']);
+    expect(await rails.subscriptionsAvailable()).toBe(false);
   });
 });
 

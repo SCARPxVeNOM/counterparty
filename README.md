@@ -274,11 +274,28 @@ audit row explain a decision rather than merely accompany it.
 
 ## Known state
 
-- **Razorpay keys in `rzp-test-key.csv` return 401 on every endpoint.** They parse
-  correctly and have the right shape, so the credentials themselves are being
-  rejected — most likely regenerated on the dashboard after that CSV was
-  downloaded. `pnpm smoke:live` walks mandate → gate → signed offer successfully
-  and stops exactly at auth. Regenerate the test key and it will complete.
+**Razorpay test-mode rails are live.** `pnpm smoke:live` creates real objects:
+
+```
+OK   orders.create        order_TU2YhbtUvpl2aP  ₹4,491  status=created
+OK   payment_links.create plink_TU2YiPzuH2GWjB  https://rzp.io/rzp/rPNqMRDb
+OK   campaign link        plink_TU2Yixj7I7nwJr  https://rzp.io/rzp/CqYEWtbx
+SKIP offers              Offers API not enabled on this account
+SKIP subscriptions       not enabled on this account
+OK   authorize            pay_SIM…  simulated=true
+OK   settle               path=pre_auth  net=₹4,491
+```
+
+- **Offers and Subscriptions are switched off on the test account.** Both are
+  reported, not thrown — see [`docs/CORRECTIONS.md`](docs/CORRECTIONS.md) C6.
+  Note that Offers could not be created via API even if enabled: `POST /offers`
+  is 405, and Razorpay creates offers from the Dashboard only. Enable
+  Subscriptions in the Dashboard to unlock the win-back path.
+- **The authorize step is still simulated.** Everything upstream and downstream
+  is real. To produce a genuine authorized payment, run
+  `pnpm smoke:live --wait`, then pay the printed link with test card
+  `4111 1111 1111 1111` (any future expiry, any CVV). Capture and refund then
+  execute against a real payment id.
 - **No `GEMINI_API_KEY` configured.** The console runs on the rule-based selling
   agent, badged as such. The gate, detectors, signing and audit chain are
   unaffected — none of them are downstream of the model.
