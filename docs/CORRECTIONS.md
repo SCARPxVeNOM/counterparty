@@ -141,6 +141,40 @@ live demo that has to fire on the night.
 
 ---
 
+## C5 — Two clauses in §4's envelope are unreachable as written
+
+Not errors — the reference envelope is coherent and every clause validates. But
+building the gate and testing clause by clause showed that two of §4's numbers
+never actually bind, because a tighter clause always gets there first. A merchant
+reading the envelope would reasonably believe they were the operative limits.
+
+**`bundle_rules.combined_depth_pct: 20` is unreachable for most SKUs.**
+Clearing an 18% floor margin at a 20% discount requires a list margin of at least
+34.4%:
+
+```
+offered = list × 0.80,  and we need  (offered − cost) / offered ≥ 0.18
+⇒ cost ≤ list × 0.80 × 0.82 = list × 0.656
+⇒ list margin ≥ 34.4%
+```
+
+The demo kettle has a 31.9% list margin, so `floor_margin_pct` binds at 16.9% and
+the bundle ceiling never applies. It only becomes operative on genuinely
+high-margin lines.
+
+**`per_buyer_discount_cap_inr: 2000` binds before the bundle ceiling above
+₹10,000.** A 20% discount on a ₹14,970 three-unit basket is ₹2,994, so the cap
+binds at 13.36% — again before the bundle rule.
+
+Both are asserted as tests rather than fixed, because both may well be what the
+merchant intended: a per-buyer cap *should* bind on large baskets, and a floor
+margin *should* stop an unaffordable bundle discount. The point is that the gate
+now cites the clause that actually bound rather than the one someone assumed
+would, which is the difference between an audit row that explains a decision and
+one that merely accompanies it.
+
+---
+
 ## C4 — Collapse had to be a ratchet
 
 **Design note §5.2** describes authority collapsing above a threshold, but not
