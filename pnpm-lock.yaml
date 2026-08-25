@@ -105,6 +105,9 @@ importers:
 
   packages/demo:
     dependencies:
+      '@counterparty/agents':
+        specifier: workspace:*
+        version: link:../agents
       '@counterparty/core':
         specifier: workspace:*
         version: link:../core

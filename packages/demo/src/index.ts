@@ -109,3 +109,5 @@ export function demoBudget(): BudgetState {
 }
 
 export { ScriptedSeller } from './scripted-seller';
+
+export { syntheticHaltedCohort, syntheticLapsedAuthorizations } from './halted-cohort';

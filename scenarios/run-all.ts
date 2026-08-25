@@ -17,6 +17,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
+  available,
   commit,
   formatInr,
   formatRow,
@@ -30,7 +31,7 @@ import {
   type BudgetState,
   type JsonObject,
 } from '@counterparty/core';
-import { Session } from '@counterparty/agents';
+import { Session, runCampaign } from '@counterparty/agents';
 import type { GenerateRequest, GenerateResult, LLMProvider } from '@counterparty/llm';
 import {
   CATALOG,
@@ -40,6 +41,8 @@ import {
   demoMandate,
   gateKey,
   merchantKey,
+  syntheticHaltedCohort,
+  syntheticLapsedAuthorizations,
 } from '@counterparty/demo';
 
 // ---------------------------------------------------------------------------
@@ -237,17 +240,85 @@ async function scenarioThree(): Promise<void> {
     gate(`SIGNED  depth ${first.offer.depth_pct}%  clause:${first.offer.authorized_by}`);
   }
 
-  // A win-back campaign burns most of the pool, against the SAME envelope.
-  console.log('\n  A win-back campaign runs, targeting lapsed authorizations:');
-  const held = reserve(
-    demoBudget(),
-    { id: 'camp_winback', amount: rupeesToPaise(38_600), buyerId: 'segment_lapsed', purpose: 'campaign', ttlMs: 3_600_000 },
-    DEMO_NOW,
+  /**
+   * A real campaign against the SAME envelope and the SAME budget. Every offer
+   * below goes through the identical gate a negotiation turn uses — only the
+   * addressing changes.
+   *
+   * The cohort is synthetic and says so on every row it writes. Subscriptions
+   * is not provisioned on the test account, so a genuinely halted subscriber
+   * cannot be produced; nothing else about this is invented.
+   */
+  const cohort = syntheticHaltedCohort();
+  console.log(`\n  A win-back campaign runs against ${cohort.members.length} halted subscribers:`);
+  console.log(`  segment=${cohort.id}  source=${cohort.source.toUpperCase()}`);
+
+  const campaign = runCampaign({
+    campaignId: 'camp_winback',
+    mandate: demoMandate(),
+    gateKey,
+    catalog: CATALOG,
+    budget: first.offer === undefined ? demoBudget() : before.budget,
+    segment: cohort,
+    depthPct: 10,
+    rationale: 'win-back offer to subscribers halted after repeated failed charges',
+    now: DEMO_NOW,
+  });
+
+  for (const outcome of campaign.outcomes) {
+    const verdict =
+      outcome.offer !== undefined
+        ? `SIGNED  ${formatInr(rupeesToPaise(outcome.offer.offered_total_inr))}  (${outcome.offer.depth_pct}% off)`
+        : `REFUSED clause:${outcome.refusal?.clause}`;
+    console.log(`    ${outcome.member.buyerId}  ${verdict}`);
+  }
+
+  gate(`reached ${campaign.reached} of ${cohort.members.length}, refused ${campaign.refused}`);
+  gate(`campaign spent ${formatInr(rupeesToPaise(campaign.committedInr))} of the ₹40,000 shared pool`);
+  gate(`pool remaining ${formatInr(available(campaign.budget, DEMO_NOW))}`);
+
+  check('the campaign ran through the same gate', campaign.ledger.rows.length === cohort.members.length);
+  check('every campaign row is marked synthetic', campaign.ledger.rows.every((r) => r.agent_rationale.startsWith('[SYNTHETIC SEGMENT]')));
+  check('the campaign audit chain verifies', verifyChain(campaign.ledger.rows).ok);
+  check('the campaign never spent past its authority', campaign.committedInr <= 40000);
+
+  /**
+   * §7's other named target. A second wave against the remaining pool — and
+   * this one runs out of budget partway, which is the behaviour worth showing:
+   * the campaign stops itself, and the boundary is a row in the ledger rather
+   * than a silent truncation.
+   */
+  const lapsed = syntheticLapsedAuthorizations();
+  console.log(`\n  A second wave, against ${lapsed.members.length} lapsed authorizations:`);
+
+  const wave2 = runCampaign({
+    campaignId: 'camp_lapsed',
+    mandate: demoMandate(),
+    gateKey,
+    catalog: CATALOG,
+    budget: campaign.budget,
+    segment: lapsed,
+    depthPct: 10,
+    rationale: 'win-back offer to buyers whose authorization lapsed uncaptured',
+    now: DEMO_NOW,
+  });
+
+  gate(`reached ${wave2.reached} of ${lapsed.members.length}, refused ${wave2.refused}`);
+  gate(`the campaign stopped itself when the pool emptied`);
+  const firstRefusal = wave2.outcomes.find((o) => o.refusal !== undefined);
+  if (firstRefusal !== undefined) {
+    gate(`first refusal  ${firstRefusal.member.buyerId}  clause:${firstRefusal.refusal?.clause}`);
+  }
+  gate(`pool remaining ${formatInr(available(wave2.budget, DEMO_NOW))}`);
+
+  check('the second wave ran out of budget partway', wave2.stoppedEarly);
+  check('it stopped rather than overspending', wave2.reached > 0 && wave2.refused > 0);
+  check(
+    'every member it could not reach got a refusal row citing the budget',
+    wave2.ledger.rows.filter((r) => r.outcome === 'refused').every((r) => r.authorized_by === 'authority.discount_budget_inr_per_day'),
   );
-  if (!held.ok) throw new Error('campaign reservation failed');
-  const burned = commit(held.state, 'camp_winback', DEMO_NOW);
-  if (!burned.ok) throw new Error('campaign commit failed');
-  gate(`campaign spent ₹38,600 of the ₹40,000 shared pool`);
+
+  const burned = { ok: true as const, state: wave2.budget };
 
   console.log('\n  The same negotiation, immediately afterwards:');
   const after = session(

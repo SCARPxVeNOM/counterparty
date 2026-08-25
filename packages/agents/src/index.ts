@@ -19,3 +19,16 @@ export {
 } from './buyer';
 
 export { Session, type SessionOptions, type TurnResult } from './session';
+
+export {
+  SEGMENT_SOURCES,
+  campaignCostInr,
+  isSynthetic,
+  runCampaign,
+  type CampaignOptions,
+  type CampaignOutcome,
+  type CampaignResult,
+  type Segment,
+  type SegmentMember,
+  type SegmentSource,
+} from './campaign';

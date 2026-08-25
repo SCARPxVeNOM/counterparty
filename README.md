@@ -257,7 +257,7 @@ pnpm smoke:live --wait   # print a payment link and wait for a real test card
 | Conversational in-app checkout | the negotiation *is* the checkout |
 | Agent-readable catalog | ACP/UCP shape + AOCF terms + `upi-uap` |
 | Upsell & cross-sell | bundle authority in the envelope |
-| Campaign orchestrator | same envelope, one-to-many, one shared budget |
+| Campaign orchestrator | `runCampaign` calls the same `evaluateQuote` a negotiation calls, threading the same budget |
 | WHY NOW — NPCI UAP | the selling mandate is the missing mirror of UAP's buyer authority |
 | WHY NOW — ACP / AP2 / x402 | AP2's proven reasoning-layer gap is the thesis |
 | Every money action explainable | audit row cites the binding clause by name |
@@ -313,6 +313,15 @@ OK   settle               path=pre_auth  net=₹4,491
   `pnpm smoke:live --wait`, then pay the printed link with test card
   `4111 1111 1111 1111` (any future expiry, any CVV). Capture and refund then
   execute against a real payment id.
+- **The win-back cohorts are synthetic, and say so.** Subscriptions is not
+  provisioned, so a genuinely halted subscriber cannot be produced — you cannot
+  halt a subscription that was never created. The segments in
+  `packages/demo/src/halted-cohort.ts` are invented; everything else about the
+  campaign is real. `source: 'synthetic'` rides into every audit row as a
+  `[SYNTHETIC SEGMENT]` prefix, so a reader six months from now does not have to
+  know how the demo was configured to tell whether these were real customers.
+  Swapping in live data is the members array and the source tag.
+
 - **No `GEMINI_API_KEY` configured.** The console runs on the rule-based selling
   agent, badged as such. The gate, detectors, signing and audit chain are
   unaffected — none of them are downstream of the model.
