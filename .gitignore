@@ -1,0 +1,40 @@
+# secrets — never commit
+.env
+.env.local
+*.pem
+keys/
+!keys/.gitkeep
+
+# dependencies
+node_modules/
+.pnpm-store/
+
+# build output
+dist/
+build/
+*.tsbuildinfo
+.next/
+out/
+
+# data
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+data/
+
+# test / coverage
+coverage/
+.vitest/
+
+# editor / os
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*

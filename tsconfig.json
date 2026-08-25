@@ -1,0 +1,23 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "paths": {
+      "@counterparty/core": ["./packages/core/src/index.ts"],
+      "@counterparty/core/*": ["./packages/core/src/*"],
+      "@counterparty/llm": ["./packages/llm/src/index.ts"],
+      "@counterparty/rails": ["./packages/rails/src/index.ts"],
+      "@counterparty/extract": ["./packages/extract/src/index.ts"],
+      "@counterparty/agents": ["./packages/agents/src/index.ts"],
+      "@counterparty/store": ["./packages/store/src/index.ts"]
+    }
+  },
+  "include": [
+    "packages/*/src/**/*",
+    "packages/*/test/**/*",
+    "apps/cli/src/**/*",
+    "scenarios/**/*",
+    "scripts/**/*",
+    "vitest.config.ts"
+  ],
+  "exclude": ["node_modules", "**/dist", "apps/web"]
+}
