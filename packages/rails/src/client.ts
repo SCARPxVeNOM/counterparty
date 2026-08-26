@@ -39,6 +39,17 @@ export interface Exchange {
 const DEFAULT_BASE = 'https://api.razorpay.com/v1';
 
 export class RazorpayClient {
+  /**
+   * The public half of the credential pair, deliberately readable.
+   *
+   * Razorpay Checkout runs in the buyer's browser and needs the key id in the
+   * page. That is what a key id is for — it identifies the merchant and
+   * authorizes nothing. The secret builds the Basic header below and is never
+   * exposed on this class at all, so there is no accessor to reach for by
+   * mistake when wiring up a browser payload.
+   */
+  readonly keyId: string;
+
   private readonly authHeader: string;
   private readonly baseUrl: string;
   private readonly fetchImpl: typeof fetch;
@@ -49,6 +60,7 @@ export class RazorpayClient {
     if (keyId === '' || keySecret === '') {
       throw new RailsError('Razorpay credentials are missing', 'MISSING_CREDENTIALS');
     }
+    this.keyId = keyId;
     this.authHeader = `Basic ${Buffer.from(`${keyId}:${keySecret}`).toString('base64')}`;
     this.baseUrl = options.baseUrl ?? DEFAULT_BASE;
     this.fetchImpl = options.fetchImpl ?? fetch;

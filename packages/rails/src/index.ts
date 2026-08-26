@@ -23,4 +23,13 @@ export {
 
 export { LiveAuthorizer, SimAuthorizer, toPayment } from './authorize';
 
+export {
+  DOMESTIC_TEST_CARD,
+  LocalCheckoutHost,
+  renderCheckoutPage,
+  type CheckoutHost,
+  type CheckoutRequest,
+  type CheckoutSession,
+} from './checkout';
+
 export { Rails, type RailsOptions } from './rails';

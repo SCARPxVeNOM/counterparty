@@ -16,6 +16,7 @@ import {
 } from '@counterparty/core';
 import { RazorpayClient } from '../src/client';
 import { LiveAuthorizer, SimAuthorizer } from '../src/authorize';
+import type { CheckoutHost, CheckoutRequest } from '../src/checkout';
 import { Rails } from '../src/rails';
 import { RailsError, type RazorpayPayment } from '../src/types';
 
@@ -372,35 +373,98 @@ describe('the simulated cardholder', () => {
 });
 
 describe('the live authorizer', () => {
-  it('creates a real payment link and returns the payment once it appears', async () => {
+  /**
+   * A checkout host that binds no port, and records what it was asked to show.
+   *
+   * The tests these replaced stubbed `fetch`, asserted that `/payment_links`
+   * was called, and passed — while the route they described could not work at
+   * all, because a payment link carries its own order and the poll watches
+   * ours. A stub will answer a request reality never routes. So the assertion
+   * that matters now is which order the human is actually paying.
+   */
+  function fakeCheckout() {
+    const shown: CheckoutRequest[] = [];
+    let closed = 0;
+    const host: CheckoutHost = {
+      open: async (request) => {
+        shown.push(request);
+        return { url: 'http://127.0.0.1:9999/', close: async () => void closed++ };
+      },
+    };
+    return { host, shown, closed: () => closed };
+  }
+
+  it('opens checkout bound to the order the gate signed, and returns the payment', async () => {
     const { impl, calls } = stubFetch({
       '/orders': ORDER,
-      '/payment_links': { id: 'plink_1', short_url: 'https://rzp.io/i/abc', amount: 449100, status: 'created' },
       '/orders/order_ABC123/payments': { count: 1, items: [{ ...CAPTURED, status: 'authorized', captured: false }] },
     });
     const client = new RazorpayClient({ credentials: { keyId: 'rzp_test_s', keySecret: 's' }, fetchImpl: impl });
+    const checkout = fakeCheckout();
     const rails = new Rails({
       client,
-      authorizer: new LiveAuthorizer(client, { pollIntervalMs: 1, timeoutMs: 50, sleep: async () => {} }),
+      authorizer: new LiveAuthorizer(client, {
+        pollIntervalMs: 1,
+        timeoutMs: 50,
+        sleep: async () => {},
+        checkout: checkout.host,
+      }),
       mandate,
     });
 
     const offer = signedOffer();
-    const payment = await rails.authorize(await rails.createOrder(offer), offer);
+    const order = await rails.createOrder(offer);
+    const payment = await rails.authorize(order, offer);
 
     expect(payment.simulated).toBe(false);
     expect(payment.id).toBe('pay_XYZ789');
-    expect(calls.some((c) => c.path === '/payment_links')).toBe(true);
+
+    // The binding this whole class exists for.
+    expect(checkout.shown).toHaveLength(1);
+    expect(checkout.shown[0]?.orderId).toBe(order.id);
+    expect(checkout.shown[0]?.amountPaise).toBe(order.amount_paise);
+
+    // And it must NOT reach for a payment link, which would take the money
+    // onto an order this poll can never see.
+    expect(calls.some((c) => c.path === '/payment_links')).toBe(false);
   });
 
-  it('times out with the link in the message when nobody pays', async () => {
+  it('publishes the key id but never the secret', async () => {
+    const { impl } = stubFetch({
+      '/orders': ORDER,
+      '/orders/order_ABC123/payments': { count: 1, items: [{ ...CAPTURED, status: 'authorized', captured: false }] },
+    });
+    const client = new RazorpayClient({
+      credentials: { keyId: 'rzp_test_s', keySecret: 'topsecret' },
+      fetchImpl: impl,
+    });
+    const checkout = fakeCheckout();
+    const rails = new Rails({
+      client,
+      authorizer: new LiveAuthorizer(client, {
+        pollIntervalMs: 1,
+        timeoutMs: 50,
+        sleep: async () => {},
+        checkout: checkout.host,
+      }),
+      mandate,
+    });
+
+    const offer = signedOffer();
+    await rails.authorize(await rails.createOrder(offer), offer);
+
+    expect(checkout.shown[0]?.keyId).toBe('rzp_test_s');
+    expect(JSON.stringify(checkout.shown)).not.toContain('topsecret');
+  });
+
+  it('times out naming the checkout url, and closes the page either way', async () => {
     let elapsed = 0;
     const { impl } = stubFetch({
       '/orders': ORDER,
-      '/payment_links': { id: 'plink_1', short_url: 'https://rzp.io/i/abc', amount: 449100, status: 'created' },
       '/orders/order_ABC123/payments': { count: 0, items: [] },
     });
     const client = new RazorpayClient({ credentials: { keyId: 'rzp_test_s', keySecret: 's' }, fetchImpl: impl });
+    const checkout = fakeCheckout();
     const rails = new Rails({
       client,
       authorizer: new LiveAuthorizer(client, {
@@ -408,12 +472,16 @@ describe('the live authorizer', () => {
         timeoutMs: 10,
         now: () => (elapsed += 6),
         sleep: async () => {},
+        checkout: checkout.host,
       }),
       mandate,
     });
 
     const offer = signedOffer();
-    await expect(rails.authorize(await rails.createOrder(offer), offer)).rejects.toThrow(/rzp\.io\/i\/abc/);
+    await expect(rails.authorize(await rails.createOrder(offer), offer)).rejects.toThrow(
+      /127\.0\.0\.1:9999/,
+    );
+    expect(checkout.closed()).toBe(1);
   });
 });
 

@@ -6,7 +6,8 @@
  */
 
 import type { SignedOffer } from '@counterparty/core';
-import { RazorpayClient, type RawPaymentLink, type RawList, type RawPayment } from './client';
+import { RazorpayClient, type RawList, type RawPayment } from './client';
+import { LocalCheckoutHost, type CheckoutHost } from './checkout';
 import {
   RailsError,
   type Authorizer,
@@ -16,17 +17,21 @@ import {
 } from './types';
 
 /**
- * Puts a real payment link in front of a human and waits for them to pay.
+ * Puts real Razorpay Checkout in front of a human and waits for them to pay.
  *
  * Produces a genuine payment in the `authorized` state, which real capture and
  * real refund calls can then act on. This is the path for the moment a judge
  * wants to try it themselves.
  *
+ * Checkout rather than a Payment Link, because a link mints its own order and
+ * the payment would never land on the order the gate signed — see checkout.ts
+ * for the full account. `rails.createPaymentLink` still exists; it is a way to
+ * bill someone, not a way to authorize a specific order.
+ *
  * Polling rather than webhooks by default. A webhook needs a public URL, which
  * needs ngrok, which is one more thing to fail on the night — and Razorpay's
  * payments list is perfectly adequate for a demo-length wait. `onPending` fires
- * each cycle so the console can show a QR code and a countdown rather than a
- * spinner.
+ * each cycle so the console can show a countdown rather than a spinner.
  */
 export class LiveAuthorizer implements Authorizer {
   readonly mode = 'live' as const;
@@ -36,9 +41,13 @@ export class LiveAuthorizer implements Authorizer {
     private readonly options: {
       readonly pollIntervalMs?: number;
       readonly timeoutMs?: number;
-      readonly onPending?: (link: string, elapsedMs: number) => void;
+      /** Fires once, as soon as there is somewhere for the human to go. */
+      readonly onReady?: (checkoutUrl: string) => void;
+      readonly onPending?: (checkoutUrl: string, elapsedMs: number) => void;
       readonly now?: () => number;
       readonly sleep?: (ms: number) => Promise<void>;
+      readonly checkout?: CheckoutHost;
+      readonly merchantName?: string;
     } = {},
   ) {}
 
@@ -47,35 +56,37 @@ export class LiveAuthorizer implements Authorizer {
     const timeout = this.options.timeoutMs ?? 5 * 60 * 1000;
     const now = this.options.now ?? Date.now;
     const sleep = this.options.sleep ?? ((ms: number) => new Promise((r) => setTimeout(r, ms)));
+    const host = this.options.checkout ?? new LocalCheckoutHost();
 
-    const link = await this.client.post<RawPaymentLink>('/payment_links', {
-      amount: order.amount_paise,
-      currency: 'INR',
-      description: `Offer ${offer.offer_id}`,
-      reference_id: offer.offer_id,
-      notify: { sms: false, email: false },
-      reminder_enable: false,
-      notes: {
-        offer_id: offer.offer_id,
-        envelope_id: offer.envelope_id,
-        authorized_by: offer.authorized_by,
-      },
+    const session = await host.open({
+      keyId: this.client.keyId,
+      orderId: order.id,
+      amountPaise: order.amount_paise,
+      description: `Offer ${offer.offer_id} (${offer.authorized_by})`,
+      merchantName: this.options.merchantName ?? 'Counterparty',
     });
+    this.options.onReady?.(session.url);
 
-    const startedAt = now();
-    for (;;) {
-      const found = await this.findAuthorizedPayment(order.id);
-      if (found !== null) return found;
+    // The server outlives neither success nor failure. A checkout page still
+    // listening after the payment resolved is a port held open for nothing.
+    try {
+      const startedAt = now();
+      for (;;) {
+        const found = await this.findAuthorizedPayment(order.id);
+        if (found !== null) return found;
 
-      const elapsed = now() - startedAt;
-      if (elapsed >= timeout) {
-        throw new RailsError(
-          `no payment authorized for order ${order.id} within ${Math.round(timeout / 1000)}s — the link at ${link.short_url} was never paid`,
-          'AUTHORIZE_TIMEOUT',
-        );
+        const elapsed = now() - startedAt;
+        if (elapsed >= timeout) {
+          throw new RailsError(
+            `no payment authorized for order ${order.id} within ${Math.round(timeout / 1000)}s — checkout at ${session.url} was never completed`,
+            'AUTHORIZE_TIMEOUT',
+          );
+        }
+        this.options.onPending?.(session.url, elapsed);
+        await sleep(interval);
       }
-      this.options.onPending?.(link.short_url, elapsed);
-      await sleep(interval);
+    } finally {
+      await session.close();
     }
   }
 

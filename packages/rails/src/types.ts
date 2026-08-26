@@ -120,9 +120,9 @@ export class RailsError extends Error {
 /**
  * Turns a signed offer into an authorized payment.
  *
- * The one swappable seam. `LiveAuthorizer` puts a real payment link in front of
- * a human; `SimAuthorizer` fabricates the tap. Nothing else in the system
- * changes between modes.
+ * The one swappable seam. `LiveAuthorizer` puts real Razorpay Checkout, bound
+ * to this order, in front of a human; `SimAuthorizer` fabricates the tap.
+ * Nothing else in the system changes between modes.
  */
 export interface Authorizer {
   readonly mode: AuthorizeMode;

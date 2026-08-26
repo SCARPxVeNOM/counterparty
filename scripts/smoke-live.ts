@@ -6,9 +6,11 @@
  * creates — printing the actual ids so there is nothing to take on trust.
  *
  *   pnpm smoke:live           create everything, simulate the cardholder
- *   pnpm smoke:live --wait    print a payment link and wait for a real test card
+ *   pnpm smoke:live --wait    open Checkout on the real order, wait for a card
  *
- * Test card: 4111 1111 1111 1111, any future expiry, any CVV.
+ * Test card: 4100 2800 0000 1007 (Razorpay's DOMESTIC card — the familiar
+ * 4111 1111 1111 1111 is the international one and an Indian account declines
+ * it), any future expiry, any CVV.
  */
 
 import {
@@ -24,7 +26,13 @@ import {
   INITIAL_PRESSURE,
   type SkuPricing,
 } from '@counterparty/core';
-import { LiveAuthorizer, Rails, RazorpayClient, SimAuthorizer } from '@counterparty/rails';
+import {
+  DOMESTIC_TEST_CARD,
+  LiveAuthorizer,
+  Rails,
+  RazorpayClient,
+  SimAuthorizer,
+} from '@counterparty/rails';
 import { loadConfig, readiness } from '@counterparty/config';
 
 const WAIT = process.argv.includes('--wait');
@@ -116,12 +124,29 @@ async function main(): Promise<void> {
   const client = new RazorpayClient({
     credentials: { keyId: config.razorpayKeyId, keySecret: config.razorpayKeySecret },
   });
+  let lastReport = -1;
   const authorizer = WAIT
     ? new LiveAuthorizer(client, {
         pollIntervalMs: 3000,
-        timeoutMs: 5 * 60 * 1000,
-        onPending: (link, elapsed) =>
-          console.log(`       waiting for payment… ${Math.round(elapsed / 1000)}s   ${link}`),
+        timeoutMs: 25 * 60 * 1000,
+        merchantName: 'Counterparty — Kettle & Co',
+        onReady: (url) =>
+          console.log(
+            `\n  ┌─ PAY HERE ${'─'.repeat(52)}\n` +
+              `  │  ${url}\n` +
+              `  │  Click "Open Razorpay Checkout", then Cards.\n` +
+              `  │  Domestic test card ${DOMESTIC_TEST_CARD} — any future expiry,\n` +
+              `  │  any CVV, then Success on the mock bank page.\n` +
+              `  └${'─'.repeat(63)}\n`,
+          ),
+        // Every poll is 3s; a line each would be 200 lines of noise in ten
+        // minutes. Report once every 15s instead.
+        onPending: (url, elapsed) => {
+          const bucket = Math.floor(elapsed / 15000);
+          if (bucket === lastReport) return;
+          lastReport = bucket;
+          console.log(`       waiting for the card tap… ${Math.round(elapsed / 1000)}s   ${url}`);
+        },
       })
     : new SimAuthorizer();
   const rails = new Rails({ client, authorizer, mandate });
@@ -182,10 +207,11 @@ async function main(): Promise<void> {
   }
 
   // --- authorize, capture, refund -----------------------------------------
-  if (WAIT && link !== null) {
-    console.log(`\n  Pay this link with test card 4111 1111 1111 1111 to continue:\n  ${link.short_url}\n`);
-  }
-
+  //
+  // Under --wait this blocks on a real human. The URL to visit is printed by
+  // the authorizer's onReady, and it is a Checkout page bound to `order` — not
+  // either of the payment links above, which carry orders of their own and so
+  // could never authorize this one.
   const payment = await attempt('authorize', () => rails.authorize(order, offer));
   if (payment === null) {
     console.log('\nStopped before capture: no authorized payment.\n');
