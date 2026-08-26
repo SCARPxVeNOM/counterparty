@@ -309,3 +309,60 @@ This arrives as a real, recorded, `failed` payment against the correct order —
 so the plumbing looks entirely healthy right up until it declines. The domestic
 card is `4100 2800 0000 1007`
 ([Test Card Details](https://razorpay.com/docs/payments/payments/test-card-details/)).
+
+---
+
+## C8 — A Razorpay Payment Page cannot be scraped, and has no cost on it
+
+**Design note §6** describes onboarding as `Storefront ──▶ Crawl + LLM extract`,
+with the implicit assumption that a merchant's page is markup you can read.
+
+Pointed at a real Razorpay-hosted Payment Page, the storefront reader throws
+`no SKU found` — and it is right to, because the page has no product content at
+all. Its entire body is:
+
+```html
+<div id="paymentpage-container"></div>
+```
+
+Everything visible is rendered client-side. A crawler reading rendered text
+finds nothing; a crawler reading the HTML finds an empty shell.
+
+**But the page is not withholding the data.** It ships a JSON object between two
+markers Razorpay puts there deliberately:
+
+```
+// <<<JSON_DATA_START>>>
+var data = {"key_id":…,"payment_link":{"amount":100000,…}}
+// <<<JSON_DATA_END>>>
+```
+
+So the answer was not a better scraper. `readSource` now dispatches on what the
+bytes are, and `razorpay-page.ts` reads the payload directly. A structured
+source earns a structured confidence — one authoritative amount, in paise, in a
+typed field, with nothing on the page able to contradict it.
+
+### The finding underneath
+
+**The page carries no unit cost, and no customer-facing page ever will.** Not an
+omission — a property of what a storefront is for. A page states what the
+customer pays; it never states what the merchant paid.
+
+So margin cannot be established from a public page at all, `cost_absent` fires,
+cost confidence collapses to 0.048, and the gate refuses any discount on that
+SKU citing `confidence_policy.min_margin_confidence`.
+
+This matters for how §5.4 is argued. The synthetic blender fixture demonstrates
+the clause firing on manufactured ambiguity — struck-through MRP, variant table,
+a stale-cost marker — all of which we wrote ourselves. The real page
+demonstrates it firing for the reason it will actually fire in production, on
+bytes nobody on this project authored. Both fixtures stay: one exercises the
+ambiguity detectors, the other is evidence.
+
+### A parsing detail worth keeping
+
+The block between the markers does not end where it appears to. It closes with
+`;` **and the `// ` that prefixes the end-marker line**, so trimming a trailing
+semicolon leaves a comment behind and `JSON.parse` fails 2,664 characters from
+anything a reader would think to suspect. Bounding the object by its own first
+`{` and last `}` needs no such guesswork. There is a test for it.

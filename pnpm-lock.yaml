@@ -41,6 +41,9 @@ importers:
       '@counterparty/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@counterparty/extract':
+        specifier: workspace:*
+        version: link:../../packages/extract
 
   apps/web:
     dependencies:
@@ -56,6 +59,9 @@ importers:
       '@counterparty/demo':
         specifier: workspace:*
         version: link:../../packages/demo
+      '@counterparty/extract':
+        specifier: workspace:*
+        version: link:../../packages/extract
       '@counterparty/llm':
         specifier: workspace:*
         version: link:../../packages/llm

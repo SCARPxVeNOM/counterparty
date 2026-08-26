@@ -45,3 +45,10 @@ demo-artifacts/
 # next
 .next/
 next-env.d.ts
+
+# Written by `next dev` on every run (generate-agent-files.js). Generated
+# content telling coding agents which Next version this is — useful locally,
+# not something this repo should carry. Ignored rather than committed so the
+# tree stays clean without the repo growing files nobody here wrote.
+apps/web/AGENTS.md
+apps/web/CLAUDE.md

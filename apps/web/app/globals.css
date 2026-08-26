@@ -680,3 +680,181 @@ button.send:disabled {
   color: var(--paper-dim);
   font-weight: 400;
 }
+
+/* ---------------------------------------------------------------------------
+ * Onboarding screen.
+ *
+ * Same chassis as the console, one column instead of three. The rule it obeys:
+ * a confidence bar never appears without the evidence that produced it directly
+ * underneath. A bar alone is a verdict the merchant has to accept; a bar above
+ * "no unit cost anywhere in the page" is an argument they can act on.
+ * ------------------------------------------------------------------------- */
+
+.onboard {
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 0 20px 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/*
+ * The console masthead is a grid child spanning three columns; here it is a
+ * flex item in a single narrow column, so the wordmark and the tagline collide
+ * unless the pair is told to lay itself out.
+ */
+.onboard .masthead {
+  margin-bottom: 6px;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.onboard .masthead > div:first-child {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+}
+
+.onboard .tagline {
+  min-width: 0;
+}
+
+.onboard .panel {
+  border: 1px solid var(--rule);
+  background: var(--chassis-raised);
+}
+
+.onboard .panel.collapsed {
+  border-color: var(--oxide-dim);
+}
+
+.lede {
+  margin: 0 0 14px;
+  color: var(--paper-dim);
+  max-width: 62ch;
+}
+
+.composer-line .target {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.composer-line .sku {
+  flex: 0 0 150px;
+}
+
+.onboard input {
+  font: inherit;
+  padding: 7px 9px;
+  color: var(--paper);
+  background: var(--chassis-sunk);
+  border: 1px solid var(--rule-bright);
+}
+
+.onboard input:focus {
+  outline: none;
+  border-color: var(--amber-dim);
+}
+
+/*
+ * Scoped to `.primary` on purpose. A bare `.onboard button` rule sits later in
+ * this file than `.persona`, so it silently repainted every fixture chip amber
+ * — amber text on amber, which rendered one of them invisible.
+ */
+.onboard button.primary {
+  font: inherit;
+  font-size: 11px;
+  padding: 7px 14px;
+  cursor: pointer;
+  color: var(--chassis);
+  background: var(--amber);
+  border: 0;
+}
+
+.onboard button.primary:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.fixtures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 10px;
+}
+
+.fixtures .persona.on {
+  color: var(--amber);
+  border-color: var(--amber-dim);
+}
+
+.field {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.field:last-child {
+  border-bottom: 0;
+}
+
+.field-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 6px;
+}
+
+.reason {
+  margin: 8px 0 0;
+  font-size: 11.5px;
+  color: var(--paper-dim);
+  line-height: 1.55;
+}
+
+.reason.dim {
+  color: var(--paper-faint);
+}
+
+.reason.provenance {
+  font-size: 10.5px;
+  margin-top: 10px;
+  padding-left: 9px;
+  border-left: 1px solid var(--rule-bright);
+  word-break: break-word;
+}
+
+.kind {
+  color: var(--oxide);
+  margin-right: 6px;
+}
+
+.evidence {
+  display: block;
+  margin-top: 3px;
+  padding-left: 9px;
+  border-left: 1px solid var(--oxide-dim);
+  color: var(--paper-faint);
+  word-break: break-word;
+}
+
+.mono-wrap {
+  word-break: break-all;
+}
+
+.amber {
+  color: var(--amber);
+}
+
+.oxide {
+  color: var(--oxide);
+}
+
+.dim {
+  color: var(--paper-faint);
+}
+
+a.badge {
+  text-decoration: none;
+}

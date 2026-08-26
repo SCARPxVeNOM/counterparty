@@ -217,6 +217,13 @@ export default function Console() {
         <span className="wordmark">Counterparty</span>
         <span className="tagline">selling mandate · {view.envelope.merchantId}</span>
         <div className="masthead-right">
+          <a
+            className="badge"
+            href="/onboard"
+            title="Read a storefront or a Razorpay Payment Page, and see what discount authority it earns."
+          >
+            onboarding →
+          </a>
           <span
             className={`badge ${view.runtime.agentMode === 'gemini' ? 'live' : 'sim'}`}
             title={

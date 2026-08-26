@@ -12,12 +12,18 @@ export {
 
 export {
   ExtractionError,
-  extractCatalog,
-  extractEntry,
-  type CatalogExtraction,
   type ExtractionResult,
   type ExtractionSource,
   type FieldReport,
-} from './extract';
+} from './types';
 
-export { loadFixture, FIXTURES, type FixtureName } from './fixtures';
+export { extractCatalog, extractEntry, readSource, type CatalogExtraction } from './extract';
+
+export {
+  extractFromPaymentPage,
+  isRazorpayPaymentPage,
+  parsePaymentPageData,
+  STRUCTURED_PRICE_CONFIDENCE,
+} from './razorpay-page';
+
+export { loadFixture, fetchSource, FIXTURES, type FixtureName } from './fixtures';

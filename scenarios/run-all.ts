@@ -16,6 +16,7 @@
 
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import {
   available,
   commit,
@@ -414,27 +415,71 @@ async function scenarioFour(): Promise<void> {
 
 // ---------------------------------------------------------------------------
 
-async function main(): Promise<void> {
+/**
+ * The scenarios, addressable by name.
+ *
+ * `pnpm demo` runs all four; `counterparty replay injection` runs one. Same
+ * functions, same assertions, same exit code — replaying a single beat must not
+ * be a second implementation of it, or the thing a judge runs and the thing CI
+ * runs drift apart.
+ */
+export const SCENARIOS = {
+  bulk: { run: scenarioOne, title: 'Honest bulk buyer' },
+  injection: { run: scenarioTwo, title: 'Prompt injection — collapse, and the sale still completes' },
+  budget: { run: scenarioThree, title: 'Campaign and negotiation share one budget' },
+  verify: { run: scenarioFour, title: 'Independent verification' },
+} as const;
+
+export type ScenarioName = keyof typeof SCENARIOS;
+
+/**
+ * Run some scenarios and report. Returns the number of failed checks.
+ *
+ * Exported so `counterparty replay` shares this exact path rather than
+ * reimplementing it. A single-scenario replay that is a second implementation
+ * of the demo is a second thing to keep correct, and the one a judge runs is
+ * precisely the one that must not have drifted.
+ */
+export async function runScenarios(names: readonly ScenarioName[]): Promise<number> {
   console.log(`\nCounterparty — ${DEMO_MERCHANT}`);
   console.log('Deterministic run: fixed keys, fixed clock, scripted model turns.');
   console.log('Every gate decision, signature, clause check and budget movement below is real.');
 
-  await scenarioOne();
-  await scenarioTwo();
-  await scenarioThree();
-  await scenarioFour();
+  for (const name of names) {
+    await SCENARIOS[name].run();
+  }
 
   console.log(`\n${BAR}`);
-  if (failures === 0) {
-    console.log('All scenario checks passed.');
-  } else {
-    console.log(`${failures} scenario check(s) FAILED.`);
-  }
+  console.log(failures === 0 ? 'All scenario checks passed.' : `${failures} scenario check(s) FAILED.`);
   console.log(`${BAR}\n`);
-  process.exit(failures === 0 ? 0 : 1);
+  return failures;
 }
 
-main().catch((error) => {
-  console.error('\nscenario run failed:', error);
-  process.exit(1);
-});
+async function main(): Promise<void> {
+  const requested = process.argv.slice(2).filter((a) => !a.startsWith('-'));
+  const names = (requested.length === 0 ? Object.keys(SCENARIOS) : requested) as ScenarioName[];
+
+  for (const name of names) {
+    if (!(name in SCENARIOS)) {
+      console.error(`unknown scenario "${name}". Known: ${Object.keys(SCENARIOS).join(', ')}`);
+      process.exit(2);
+    }
+  }
+
+  process.exit((await runScenarios(names)) === 0 ? 0 : 1);
+}
+
+/**
+ * Only run when this file is the entry point.
+ *
+ * Without the guard, `counterparty replay` importing SCENARIOS from here would
+ * execute the entire demo as a side effect of the import, then run the one
+ * scenario it asked for.
+ */
+const entry = process.argv[1];
+if (entry !== undefined && import.meta.url === pathToFileURL(entry).href) {
+  main().catch((error) => {
+    console.error('\nscenario run failed:', error);
+    process.exit(1);
+  });
+}

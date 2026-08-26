@@ -28,6 +28,22 @@ export const FIXTURES = {
     url: 'https://kettleandco.example/products/500w-mixer-grinder-3-jar',
     note: 'messy page — struck-through MRP, "from" teaser, variant table, offer copy, stale cost',
   },
+  /**
+   * The only fixture that is not ours.
+   *
+   * Real bytes from a real Razorpay Payment Page, fetched over plain HTTP with
+   * no session and no auth. The other three are pages we wrote, which makes
+   * them fine for exercising specific detectors and useless as evidence that
+   * extraction works on anything we did not author.
+   *
+   * Two redactions, both noted in the file: a session token and the merchant's
+   * phone number. The key id stays — it is public by design.
+   */
+  razorpayPage: {
+    file: 'razorpay-payment-page.html',
+    url: 'https://pages.razorpay.com/pl_TUTJpXRxhr1dfQ/view',
+    note: 'REAL Razorpay Payment Page — structured JSON payload, and no unit cost anywhere',
+  },
 } as const;
 
 export type FixtureName = keyof typeof FIXTURES;

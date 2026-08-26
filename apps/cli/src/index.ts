@@ -11,6 +11,8 @@
  *   counterparty envelope <mandate.json> --merchant-key <key.pem>
  *   counterparty audit <ledger.json>
  *   counterparty keys
+ *   counterparty onboard <url|fixture>
+ *   counterparty replay [scenario]
  */
 
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -28,6 +30,15 @@ import {
   type PublicKeyRef,
   type SellingMandate,
 } from '@counterparty/core';
+import {
+  FIXTURES,
+  fetchSource,
+  isRazorpayPaymentPage,
+  loadFixture,
+  readSource,
+  type ExtractionSource,
+  type FixtureName,
+} from '@counterparty/extract';
 
 const OK = 'PASS';
 const NO = 'FAIL';
@@ -259,6 +270,123 @@ function makeKeys(): void {
 
 // ---------------------------------------------------------------------------
 
+/**
+ * Onboard a storefront: read the page, show the working, draft the envelope.
+ *
+ * The screen a merchant would see, as text. What matters is that every number
+ * arrives with the reason for it attached — a confidence score with no evidence
+ * beside it is a number the merchant has to take on faith, and taking margin
+ * authority on faith is the failure this system exists to prevent.
+ */
+async function onboard(target: string): Promise<void> {
+  const isUrl = /^https?:\/\//i.test(target);
+  let source: ExtractionSource;
+
+  if (isUrl) {
+    console.log(`\n  fetching ${target}\n`);
+    try {
+      source = await fetchSource(target);
+    } catch (error) {
+      console.error(`could not fetch ${target}: ${(error as Error).message}`);
+      process.exit(2);
+    }
+  } else {
+    if (!(target in FIXTURES)) {
+      console.error(`unknown fixture "${target}". Known: ${Object.keys(FIXTURES).join(', ')}`);
+      process.exit(2);
+    }
+    source = loadFixture(target as FixtureName);
+    console.log(`\n  fixture ${target} — ${FIXTURES[target as FixtureName].note}\n`);
+  }
+
+  const kind = isRazorpayPaymentPage(source.html) ? 'Razorpay Payment Page' : 'storefront markup';
+  console.log(`  source     ${source.url}`);
+  console.log(`  read as    ${kind}`);
+
+  let result;
+  try {
+    result = readSource(source, flag('sku'));
+  } catch (error) {
+    console.error(`\n  extraction failed: ${(error as Error).message}\n`);
+    process.exit(1);
+  }
+
+  const entry = result.entry;
+  console.log(`\n  sku        ${entry.sku}`);
+  console.log(`  title      ${entry.title.value}`);
+  console.log(`  list price ${formatInr(rupeesToPaise(Number(entry.list_price_inr.value)))}`);
+  console.log(`  unit cost  ${formatInr(rupeesToPaise(Number(entry.unit_cost_inr.value)))}`);
+  console.log(`  available  ${entry.availability.value}`);
+
+  console.log('\n  per-field confidence, and what moved it\n');
+  for (const report of result.reports) {
+    const bar = '█'.repeat(Math.round(report.confidence * 20)).padEnd(20, '·');
+    console.log(`  ${report.field.padEnd(15)} ${bar} ${report.confidence.toFixed(3)}`);
+    for (const problem of report.ambiguities) {
+      console.log(`      − ${problem.kind}: ${problem.note}`);
+      if (problem.evidence !== '') console.log(`        evidence: ${problem.evidence.slice(0, 90)}`);
+    }
+  }
+
+  console.log('\n  provenance');
+  console.log(`    price  ${entry.list_price_inr.provenance.snippet.slice(0, 100)}`);
+  console.log(`    cost   ${entry.unit_cost_inr.provenance.snippet.slice(0, 100)}`);
+  console.log(`    seen   ${entry.list_price_inr.provenance.crawled_at}`);
+
+  // --- what this means for authority --------------------------------------
+  const costConfidence = result.reports.find((r) => r.field === 'unit_cost_inr')?.confidence ?? 0;
+  const threshold = 0.85;
+
+  console.log('\n  draft authority');
+  if (costConfidence < threshold) {
+    console.log(`    max_discount_depth_pct = 0 on ${entry.sku}`);
+    console.log(
+      `    because unit_cost confidence ${costConfidence.toFixed(3)} is below ` +
+        `confidence_policy.min_margin_confidence (${threshold})`,
+    );
+    console.log('\n    The agent may not discount what it cannot prove it can afford to');
+    console.log('    discount. Supply a verified unit cost to unlock depth on this SKU.');
+  } else {
+    console.log(`    max_discount_depth_pct = up to the envelope ceiling on ${entry.sku}`);
+    console.log(`    unit_cost confidence ${costConfidence.toFixed(3)} clears the threshold`);
+  }
+
+  const out = flag('out');
+  if (out !== undefined) {
+    writeFileSync(out, JSON.stringify(entry, null, 2), 'utf8');
+    console.log(`\n  catalog entry written to ${out}`);
+  }
+  console.log();
+}
+
+/**
+ * Replay one demo scenario, or list them.
+ *
+ * Delegates to the same functions `pnpm demo` runs. A separate implementation
+ * for single-scenario replay would be a second thing to keep correct, and the
+ * one a judge runs is exactly the one that must not have drifted.
+ */
+async function replay(name: string | undefined): Promise<void> {
+  const { SCENARIOS, runScenarios } = await import('../../../scenarios/run-all');
+  const names = Object.keys(SCENARIOS);
+
+  if (name === undefined || !names.includes(name)) {
+    if (name !== undefined) console.error(`\nunknown scenario "${name}"`);
+    console.log('\n  scenarios:\n');
+    for (const [key, value] of Object.entries(SCENARIOS)) {
+      console.log(`    ${key.padEnd(10)} ${(value as { title: string }).title}`);
+    }
+    console.log('\n  counterparty replay <name>       one scenario');
+    console.log('  pnpm demo                        all four\n');
+    process.exit(name === undefined ? 0 : 2);
+  }
+
+  const failures = await runScenarios([name as keyof typeof SCENARIOS]);
+  process.exit(failures === 0 ? 0 : 1);
+}
+
+// ---------------------------------------------------------------------------
+
 function usage(): never {
   console.log(`
 counterparty — verify what a selling agent claims
@@ -276,6 +404,15 @@ counterparty — verify what a selling agent claims
 
   counterparty keys [--out <dir>]
       Generate a merchant and a gate keypair.
+
+  counterparty onboard <url|fixture> [--sku <SKU>] [--out <entry.json>]
+      Read a storefront or a Razorpay Payment Page. Prints every field with
+      the confidence behind it, the evidence that moved it, and the discount
+      authority the result would earn.
+      Fixtures: kettle, espresso, blender, razorpayPage
+
+  counterparty replay [scenario]
+      Replay one demo scenario. No argument lists them.
 `);
   process.exit(2);
 }
@@ -297,6 +434,13 @@ switch (command) {
     break;
   case 'keys':
     makeKeys();
+    break;
+  case 'onboard':
+    if (target === undefined) usage();
+    await onboard(target);
+    break;
+  case 'replay':
+    await replay(target);
     break;
   default:
     usage();

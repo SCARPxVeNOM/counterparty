@@ -8,6 +8,7 @@
   "dependencies": {
     "@counterparty/agents": "workspace:*",
     "@counterparty/config": "workspace:*",
-    "@counterparty/core": "workspace:*"
+    "@counterparty/core": "workspace:*",
+    "@counterparty/extract": "workspace:*"
   }
 }

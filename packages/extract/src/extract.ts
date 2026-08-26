@@ -22,36 +22,21 @@ import {
   type CatalogEntry,
   type Provenance,
 } from '@counterparty/core';
+import { confidenceFrom, costAmbiguities, priceAmbiguities, rupeeAmounts } from './ambiguity';
+import { isRazorpayPaymentPage, extractFromPaymentPage } from './razorpay-page';
 import {
-  confidenceFrom,
-  costAmbiguities,
-  priceAmbiguities,
-  rupeeAmounts,
-  type Ambiguity,
-} from './ambiguity';
+  ExtractionError,
+  type ExtractionResult,
+  type ExtractionSource,
+  type FieldReport,
+} from './types';
 
-export interface ExtractionSource {
-  readonly url: string;
-  readonly html: string;
-  readonly fetchedAt?: Date;
-}
-
-export interface FieldReport {
-  readonly field: string;
-  readonly value: string | number;
-  readonly confidence: number;
-  readonly ambiguities: readonly Ambiguity[];
-}
-
-export interface ExtractionResult {
-  readonly entry: CatalogEntry;
-  /** Per-field working, so the onboarding screen can show why a score is what it is. */
-  readonly reports: readonly FieldReport[];
-}
-
-export class ExtractionError extends Error {
-  override readonly name = 'ExtractionError';
-}
+export {
+  ExtractionError,
+  type ExtractionResult,
+  type ExtractionSource,
+  type FieldReport,
+} from './types';
 
 /** Text of the first element matching a class, tags stripped. */
 function textOfClass(html: string, className: string): string | null {
@@ -187,6 +172,24 @@ export function extractEntry(source: ExtractionSource): ExtractionResult {
   };
 }
 
+/**
+ * Read a page with whichever reader suits it.
+ *
+ * A Razorpay-hosted Payment Page is an empty SPA shell carrying a JSON payload;
+ * a human storefront is markup. Scraping the first or JSON-parsing the second
+ * both fail, and the failure from the wrong reader ("no SKU found") describes
+ * the reader rather than the page. Dispatch on what the bytes actually are.
+ *
+ * `skuHint` only reaches the Payment Page reader, which needs it because a
+ * Payment Page identifies a page rather than a product. Storefronts carry their
+ * own SKU and ignore it.
+ */
+export function readSource(source: ExtractionSource, skuHint?: string): ExtractionResult {
+  return isRazorpayPaymentPage(source.html)
+    ? extractFromPaymentPage(source, skuHint)
+    : extractEntry(source);
+}
+
 export interface CatalogExtraction {
   readonly catalog: Catalog;
   readonly reports: ReadonlyMap<string, readonly FieldReport[]>;
@@ -200,7 +203,7 @@ export function extractCatalog(
   const reports = new Map<string, readonly FieldReport[]>();
 
   for (const source of sources) {
-    const result = extractEntry(source);
+    const result = readSource(source);
     entries.push(result.entry);
     reports.set(result.entry.sku, result.reports);
   }

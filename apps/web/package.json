@@ -12,6 +12,7 @@
     "@counterparty/config": "workspace:*",
     "@counterparty/core": "workspace:*",
     "@counterparty/demo": "workspace:*",
+    "@counterparty/extract": "workspace:*",
     "@counterparty/llm": "workspace:*",
     "@counterparty/rails": "workspace:*",
     "next": "^16.1.6",

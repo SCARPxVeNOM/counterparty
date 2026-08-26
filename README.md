@@ -52,9 +52,14 @@ matter, because saying is not committing.
 ```bash
 pnpm install
 pnpm demo          # four scenarios, headless, deterministic — no keys needed
-pnpm test          # 363 tests, no network, no model calls
+pnpm test          # 376 tests, no network, no model calls
 pnpm typecheck     # the compiler is part of the enforcement — see below
 pnpm dev           # the console at http://localhost:3939
+```
+
+```bash
+pnpm cli replay injection            # one scenario, on its own
+pnpm cli onboard razorpayPage        # read a real Razorpay page, show the working
 ```
 
 `pnpm demo` needs no API key, no network and no working Razorpay account. It
@@ -77,6 +82,11 @@ pnpm cli envelope demo-artifacts/mandate.json --merchant-key demo-artifacts/merc
 ```
 
 The tampered file differs from the real one by **one rupee**.
+
+`counterparty replay <scenario>` runs a single beat rather than all four. It
+calls the same functions `pnpm demo` calls — a single-scenario replay that was a
+second implementation would be a second thing to keep correct, and the one a
+judge runs is precisely the one that must not have drifted.
 
 ---
 
@@ -167,6 +177,54 @@ discount on that SKU citing `confidence_policy.min_margin_confidence`.
 Uncertainty in the data layer propagates into the permission layer without
 anyone wiring it there by hand.
 
+#### On bytes we did not write
+
+Those three fixtures are pages we authored, which makes them fine for exercising
+specific detectors and useless as evidence that any of this works on a page we
+did not control. So there is a fourth, and it is a **real Razorpay Payment
+Page**, fetched over plain HTTP with no session and no auth:
+
+```bash
+pnpm cli onboard razorpayPage          # the saved bytes
+pnpm cli onboard https://rzp.io/…      # or fetch one live
+```
+
+```
+source     https://pages.razorpay.com/pl_TUTJpXRxhr1dfQ/view
+read as    Razorpay Payment Page
+
+list_price_inr  ███████████████████· 0.970
+unit_cost_inr   █··················· 0.048
+    − cost_absent: a Payment Page states what the customer pays,
+      never what the merchant paid
+
+draft authority
+    max_discount_depth_pct = 0
+    because unit_cost confidence 0.048 is below min_margin_confidence (0.85)
+```
+
+Two findings came out of pointing the extractor at something real.
+
+**The storefront scraper cannot read it at all.** The page's entire body is
+`<div id="paymentpage-container"></div>` — everything visible is rendered
+client-side. But it is not hiding the data; it ships a JSON payload between two
+markers. So the right answer was a second reader, not a better scraper, and
+`readSource` dispatches on what the bytes actually are. A structured source also
+deserves a structured confidence: one authoritative amount, in paise, in a typed
+field, with nothing on the page to contradict it.
+
+**The page has no unit cost — and no page ever will.** Not because Razorpay
+omitted it, but because a customer-facing page states what the customer pays,
+never what the merchant paid. Margin cannot be established from a public page at
+all. The synthetic blender fixture proves the confidence clause fires; the real
+page proves it fires *for the reason it will actually fire in production*, which
+is the more useful claim.
+
+The same working is rendered at **`/onboard`** in the console, where every
+confidence bar sits directly above the evidence that moved it. A bar on its own
+is a verdict the merchant has to accept; a bar above *"no unit cost anywhere in
+the page"* is an argument they can act on.
+
 ---
 
 ## The failure handled gracefully
@@ -202,14 +260,15 @@ packages/
   llm/        provider interface, Gemini, cassette replay,
               pressure classifier                                12 tests
   agents/     selling agent, buyer personas, the session         35 tests
-  extract/    storefront → catalog, provenance and confidence    19 tests
+  extract/    two readers — storefront markup and Razorpay
+              Payment Page JSON — plus source-derived confidence 32 tests
   demo/       fixed keys, fixed clock, model-free selling agent
   config/     model routing and env, in one place
 apps/
-  web/        the console
-  cli/        verify / envelope / audit / keys
-scenarios/    four demo scenarios, runnable and asserted
-scripts/      smoke-live · settle-order · checkout-debug
+  web/        the console, and /onboard
+  cli/        verify · envelope · audit · keys · onboard · replay
+scenarios/    four demo scenarios, runnable whole or one at a time
+scripts/      smoke-live · settle-order · refund-payment · checkout-debug
 docs/         CORRECTIONS.md — claims that did not survive contact
 ```
 
@@ -286,16 +345,31 @@ to claim and worth being precise about.
 | 5 | ~~Partial capture~~ → settle at conceded amount | replaced — the primitive does not exist ([C1](docs/CORRECTIONS.md)) |
 | 6 | Full capture | ✅ against that real authorized payment |
 | 7 | Deliberate lapse | **no API call exists to make.** The action is the *absence* of a capture; the record exists so the trail shows a decision rather than an oversight |
-| 8 | Partial refund | implemented, stub-tested — not yet fired at live money |
-| 9 | Full refund | implemented, stub-tested — not yet fired at live money |
+| 8 | Partial refund | ✅ `rfnd_TUTgRaSA1TN6cr` — ₹500 off a real captured payment |
+| 9 | Full refund | same `rails.refund` call, differing only in the gate's `is_partial` flag; not fired, because the only captured payment available is the completed-sale artifact |
 | 10 | Subscription creation | ✅ `sub_TUPw7iQnJEKmAv`, `plan_TUPw7UA3pY3CX9` |
 | 11 | Subscription pause / resume | implemented, stub-tested; needs an `active` subscription, and a freshly created one is `created` |
 | 12 | Campaign offer issuance | ✅ as a payment link at the gate-signed price — Razorpay has **no** create-offer API ([C6](docs/CORRECTIONS.md)) |
 
 Two of the twelve are compositions rather than primitives, and both say so in
-the audit row. Three more are coded and unit-tested but have not moved live
-money. That is the honest version of "twelve money actions" — the alternative
-was to count a documented `400` as a feature and hope nobody ran it.
+the audit row. Two more are coded and unit-tested but have not moved live money.
+That is the honest version of "twelve money actions" — the alternative was to
+count a documented `400` as a feature and hope nobody ran it.
+
+The ₹500 refund is worth a second look: a full capture followed by a refund of
+the delta **is** Path B from [C1](docs/CORRECTIONS.md) — the composite that
+stands in for the partial capture Razorpay does not offer. So the replacement
+for the primitive that did not exist has now executed against real money, not
+just against a stub.
+
+```bash
+pnpm tsx scripts/refund-payment.ts pay_XXXXXXXX 500      # or --full
+```
+
+The gate decides, not the caller. `evaluateRefund` checks whether partials are
+permitted and whether the amount crosses `requires_human_above_inr`; the rails
+refuse to execute an authorization carrying `requires_human`. Asking for a
+refund and being allowed to make one are different things.
 
 ---
 
@@ -307,7 +381,7 @@ was to count a documented `400` as a feature and hope nobody ran it.
 | Grows merchant revenue on test-mode APIs | bundles, conceded-but-profitable closes, campaigns on a shared budget |
 | Merchant transactable by an AI buyer end to end | extracted catalog → signed offer → order → authorize → capture, **completed with a real card** |
 | Conversational in-app checkout | the negotiation *is* the checkout |
-| Agent-readable catalog | ACP/UCP shape + AOCF terms + `upi-uap` |
+| Agent-readable catalog | ACP/UCP shape + AOCF terms + `upi-uap`, built by `/onboard` from a real Razorpay page |
 | Upsell & cross-sell | bundle authority in the envelope |
 | Campaign orchestrator | `runCampaign` calls the same `evaluateQuote` a negotiation calls, threading the same budget |
 | WHY NOW — NPCI UAP | the selling mandate is the missing mirror of UAP's buyer authority |
@@ -418,6 +492,23 @@ step.
   know how the demo was configured to tell whether these were real customers.
   Swapping in live data is the members array and the source tag.
 
-- **No `GEMINI_API_KEY` configured.** The console runs on the rule-based selling
-  agent, badged as such. The gate, detectors, signing and audit chain are
-  unaffected — none of them are downstream of the model.
+- **No `GEMINI_API_KEY` configured, so Gemini has never run.** This is the
+  largest remaining gap and it deserves stating plainly rather than burying:
+  there are no recorded cassettes, so the selling agent's prose, the model half
+  of the pressure classifier, and the buyer personas have all been exercised by
+  `ScriptedProvider` and unit tests only. The console badges itself
+  `agent: scripted`.
+
+  What that does and does not undermine: the gate, the deterministic detectors,
+  the signing, the budget and the audit chain are not downstream of the model —
+  by construction, which is the entire thesis — so none of them are affected.
+  What is unproven is the reasoning layer the track asks for.
+
+  Closing it is one `.env` line. `createProvider` swaps to `GeminiProvider` the
+  moment a key exists, and a live run records to cassette on the way through, so
+  it becomes deterministic after the first session.
+
+- **Subscription pause/resume has not run live.** It needs a subscription in
+  `active`, and a freshly created one sits at `created` until a customer
+  authorizes the mandate — another human card tap. The calls are implemented and
+  stub-tested.
