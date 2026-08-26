@@ -52,7 +52,8 @@ matter, because saying is not committing.
 ```bash
 pnpm install
 pnpm demo          # four scenarios, headless, deterministic — no keys needed
-pnpm test          # 325 tests, no network, no model calls
+pnpm test          # 363 tests, no network, no model calls
+pnpm typecheck     # the compiler is part of the enforcement — see below
 pnpm dev           # the console at http://localhost:3939
 ```
 
@@ -196,17 +197,19 @@ injector** in the console.
 ```
 packages/
   core/       pure domain, zero I/O — crypto, money, mandate, gate,
-              pressure, budget, audit, catalog. 306 tests, no model calls.
-  rails/      Razorpay adapter. Accepts only SignedOffer.
-  llm/        provider interface, Gemini, cassette replay, pressure classifier
-  agents/     selling agent, buyer personas, the session that wires them
-  extract/    storefront → catalog, provenance and source-derived confidence
+              pressure, budget, audit, catalog. 265 tests, no model calls.
+  rails/      Razorpay adapter. Accepts only SignedOffer.        32 tests
+  llm/        provider interface, Gemini, cassette replay,
+              pressure classifier                                12 tests
+  agents/     selling agent, buyer personas, the session         35 tests
+  extract/    storefront → catalog, provenance and confidence    19 tests
   demo/       fixed keys, fixed clock, model-free selling agent
   config/     model routing and env, in one place
 apps/
   web/        the console
   cli/        verify / envelope / audit / keys
 scenarios/    four demo scenarios, runnable and asserted
+scripts/      smoke-live · settle-order · checkout-debug
 docs/         CORRECTIONS.md — claims that did not survive contact
 ```
 
@@ -223,7 +226,7 @@ Copy `.env.example` to `.env`. Everything degrades honestly:
 |---|---|
 | `RAZORPAY_KEY_ID` / `_SECRET` | Test-mode keys. Without them the rails cannot reach the API. |
 | `GEMINI_API_KEY` | The selling agent. Without it a rule-based stand-in drives the console, badged `agent: scripted`. |
-| `AUTHORIZE_MODE=sim\|live` | Swaps **only** the moment a human taps a card. |
+| `AUTHORIZE_MODE=sim\|live` | Swaps **only** the moment a human taps a card. `live` serves Checkout bound to the order; `sim` fabricates the tap. |
 | `LLM_MODE=cassette\|live` | `cassette` replays recordings so demos are deterministic. |
 
 **What the toggles do and do not cover.** Orders, Payment Links, Offers, Plans
@@ -242,8 +245,57 @@ scenario genuinely refuses, genuinely signs, genuinely collapses.
 
 ```bash
 pnpm smoke:live          # create every Razorpay object, print real ids
-pnpm smoke:live --wait   # print a payment link and wait for a real test card
+pnpm smoke:live --wait   # open Checkout on the order, wait for a real card
 ```
+
+`--wait` serves a Razorpay Checkout page **bound to the order the gate signed**,
+on a throwaway loopback server. Click through, pay with the domestic test card
+`4100 2800 0000 1007` (any future expiry, any CVV, then **Success** on the mock
+bank page), and the payment lands on that order in the `authorized` state.
+
+> Not `4111 1111 1111 1111`. That is Razorpay's *international* test card, and an
+> Indian test account declines it — as a real, recorded, `failed` payment, which
+> looks like healthy plumbing right up until it doesn't.
+
+If the poll gives up before you finish paying, nothing is lost — the payment is
+still authorized and still decaying toward Razorpay's automatic 3-day refund:
+
+```bash
+pnpm tsx scripts/settle-order.ts order_XXXXXXXX
+```
+
+That rebuilds a mandate, asks the gate to price the same basket, and **refuses to
+capture unless the gate independently re-derives the same total to the paisa.**
+An authorized payment is not authority to take the money; the signature is.
+
+---
+
+## The twelve money actions
+
+Each carries a mandate check, a gate signature, and an audit row citing a named
+clause. The middle column is deliberately fussy about what has actually been
+*done* versus what is merely implemented and tested — "12 money actions" is easy
+to claim and worth being precise about.
+
+| # | Action | Executed against live Razorpay? |
+|---|---|---|
+| 1 | Signed quote issuance | n/a — signing is local, and verifiable offline |
+| 2 | Discount concession | n/a — same |
+| 3 | Bundle / cross-sell price | n/a — same |
+| 4 | Authorize | ✅ **a human card at Checkout** — `pay_TUQ7MKc8zXf1gE` |
+| 5 | ~~Partial capture~~ → settle at conceded amount | replaced — the primitive does not exist ([C1](docs/CORRECTIONS.md)) |
+| 6 | Full capture | ✅ against that real authorized payment |
+| 7 | Deliberate lapse | **no API call exists to make.** The action is the *absence* of a capture; the record exists so the trail shows a decision rather than an oversight |
+| 8 | Partial refund | implemented, stub-tested — not yet fired at live money |
+| 9 | Full refund | implemented, stub-tested — not yet fired at live money |
+| 10 | Subscription creation | ✅ `sub_TUPw7iQnJEKmAv`, `plan_TUPw7UA3pY3CX9` |
+| 11 | Subscription pause / resume | implemented, stub-tested; needs an `active` subscription, and a freshly created one is `created` |
+| 12 | Campaign offer issuance | ✅ as a payment link at the gate-signed price — Razorpay has **no** create-offer API ([C6](docs/CORRECTIONS.md)) |
+
+Two of the twelve are compositions rather than primitives, and both say so in
+the audit row. Three more are coded and unit-tested but have not moved live
+money. That is the honest version of "twelve money actions" — the alternative
+was to count a documented `400` as a feature and hope nobody ran it.
 
 ---
 
@@ -253,7 +305,7 @@ pnpm smoke:live --wait   # print a payment link and wait for a real test card
 |---|---|
 | Build an agent | `packages/agents` — reasoning under adversarial pressure |
 | Grows merchant revenue on test-mode APIs | bundles, conceded-but-profitable closes, campaigns on a shared budget |
-| Merchant transactable by an AI buyer end to end | extracted catalog → signed offer → order → authorize → capture |
+| Merchant transactable by an AI buyer end to end | extracted catalog → signed offer → order → authorize → capture, **completed with a real card** |
 | Conversational in-app checkout | the negotiation *is* the checkout |
 | Agent-readable catalog | ACP/UCP shape + AOCF terms + `upi-uap` |
 | Upsell & cross-sell | bundle authority in the envelope |
@@ -274,29 +326,49 @@ audit row explain a decision rather than merely accompany it.
 
 ## Known state
 
-**Razorpay test-mode rails are live.** `pnpm smoke:live` creates real objects:
+**Razorpay test-mode rails are live, including the card tap.** `pnpm smoke:live`
+creates real objects:
 
 ```
-OK   orders.create        order_TU2YhbtUvpl2aP  ₹4,491  status=created
-OK   payment_links.create plink_TU2YiPzuH2GWjB  https://rzp.io/rzp/rPNqMRDb
-OK   campaign link        plink_TU2Yixj7I7nwJr  https://rzp.io/rzp/CqYEWtbx
-SKIP offers              Offers API not enabled on this account
-SKIP subscriptions       not enabled on this account
-OK   authorize            pay_SIM…  simulated=true
-OK   settle               path=pre_auth  net=₹4,491
+OK   orders.create        order_TUPw5MK32kzrcc  ₹4,491  status=created
+OK   payment_links.create plink_TUPw6OzJASXCqN  https://rzp.io/rzp/ebZiJ2Sf
+OK   campaign link        plink_TUPw6zUDozZkIH  https://rzp.io/rzp/lrNYiQ8
+SKIP offers              Offers API not enabled (no create API exists either)
+OK   plans.create         plan_TUPw7UA3pY3CX9
+OK   subscriptions.create sub_TUPw7iQnJEKmAv  status=created
+OK   authorize            pay_TUQ7MKc8zXf1gE  status=authorized  simulated=false
+OK   settle               path=pre_auth  net=₹4,491  simulated=false
 ```
 
-- **Offers and Subscriptions are switched off on the test account.** Both are
-  reported, not thrown — see [`docs/CORRECTIONS.md`](docs/CORRECTIONS.md) C6.
-  Offers could not be created via API even if enabled: `POST /offers` is 405,
-  and Razorpay creates offers from the Dashboard only.
+> The last two lines are spliced from a second command, and it would be tidier
+> not to mention it. The card was tapped about eight seconds after the poll gave
+> up, so that run printed `AUTHORIZE_TIMEOUT` and stopped; `settle-order.ts`
+> captured it afterwards. The payment, the order and the capture are all real —
+> the single unbroken transcript is the only fiction, and `settle-order.ts`
+> exists precisely because this is a state the demo can land in.
 
-  The Subscriptions 401 is an entitlement rejection, not a credentials one. A
-  working `/orders` call returns Razorpay's API-service headers (`X-Pam`,
-  `X-Frame-Options`) and its standard error envelope; `/plans` returns neither,
-  just a bare `{"error":"Unauthorized"}`. The request never reaches the API.
-  Enable Subscriptions under **Payment Products** in the Dashboard (some
-  accounts need support to switch it on).
+**A real card has been through this.** `pay_TUQ7MKc8zXf1gE` was authorized by a
+human tapping `4100 2800 0000 1007` at Checkout, on `order_TUPw5MK32kzrcc` — the
+order the gate signed at ₹4,491, 10% depth, citing
+`authority.max_discount_depth_pct`. It held in `authorized` (the order carries
+`payment_capture: 0`), then captured under a signed offer. Not simulated at any
+step.
+
+- **Subscriptions are enabled and working.** They were not, for most of this
+  build: `/plans` returned a bare `{"error":"Unauthorized"}` with none of
+  Razorpay's API-service headers (`X-Pam`, `X-Frame-Options`) that a working
+  `/orders` call returns — an entitlement rejection at the edge, not a
+  credentials one, and the diagnosis that told us to stop debugging the keys.
+  Once the product was switched on under **Payment Products**, `plans.create`
+  and `subscriptions.create` started returning real objects with no code change.
+
+- **Offers remain unavailable, and would be even if switched on.** `POST /offers`
+  is `405` — Razorpay has **no create-offer API at all**; offers are created from
+  the Dashboard only. The skip is reported, not thrown. See
+  [`docs/CORRECTIONS.md`](docs/CORRECTIONS.md) C6 for why drawing on a
+  Dashboard-created offer is arguably the better shape anyway: a hand-made offer
+  is itself a merchant act, so referencing one keeps the chain of authority
+  intact instead of letting the agent conjure a discount object from nothing.
 
 - **§7's win-back target is confirmed against Razorpay's own docs.** The design
   note aims campaigns at *"subscriptions halted after four consecutive failed
@@ -306,18 +378,42 @@ OK   settle               path=pre_auth  net=₹4,491
   four consecutive failures exhaust the retries, move it to `halted` and fire
   `subscription.halted`.
   ([Test Subscriptions](https://razorpay.com/docs/subscriptions/test-guide/))
-  So the halted cohort is a real, manufacturable segment once the product is
-  enabled — not a hypothetical.
-- **The authorize step is still simulated.** Everything upstream and downstream
-  is real. To produce a genuine authorized payment, run
-  `pnpm smoke:live --wait`, then pay the printed link with test card
-  `4111 1111 1111 1111` (any future expiry, any CVV). Capture and refund then
-  execute against a real payment id.
-- **The win-back cohorts are synthetic, and say so.** Subscriptions is not
-  provisioned, so a genuinely halted subscriber cannot be produced — you cannot
-  halt a subscription that was never created. The segments in
-  `packages/demo/src/halted-cohort.ts` are invented; everything else about the
-  campaign is real. `source: 'synthetic'` rides into every audit row as a
+  With the product now switched on, that cohort is manufacturable in this very
+  account — a real segment, not a hypothetical one.
+
+- **The authorize step was the last simulated thing, and is not simulated any
+  more.** Doing it for real turned up three defects, none of which any test had
+  caught — including one where the *tests themselves* certified an impossible
+  route. All three are written up in
+  [`docs/CORRECTIONS.md`](docs/CORRECTIONS.md) C7. The short version:
+
+  1. **A Payment Link cannot authorize a specific order.** `POST /payment_links`
+     has no `order_id` field; a link mints its own order. The poll watched an
+     order the payment could never land on, so a *successful* payment would have
+     timed out while the gate-signed order sat at `attempts: 0`. Authorize now
+     uses Checkout, which does take an `order_id`.
+  2. **Opening Checkout on page load silently half-renders** — dimmed page, no
+     modal, empty console. Indistinguishable from a page that just failed. It
+     opens on a click now.
+  3. **`4111 1111 1111 1111` is the international test card** and an Indian
+     account declines it, as a real recorded `failed` payment against the right
+     order.
+
+  The first one is the one worth reading. The old tests stubbed `fetch` and
+  asserted a payment link was created — passing while describing a route that
+  cannot exist, **because a stub will happily answer a request reality never
+  routes.** The replacements fake the *checkout host* rather than the network, so
+  they can assert the fact that actually matters: which order the human is
+  paying.
+
+- **The win-back cohorts are synthetic, and say so.** Subscriptions can now be
+  created, and Razorpay's Dashboard **Charge this now** button can drive one to
+  `halted` in four failures — so a genuine halted cohort is manufacturable and
+  no longer hypothetical. The demo still ships invented segments in
+  `packages/demo/src/halted-cohort.ts`, because manufacturing a dozen of them by
+  hand is Dashboard clicking, not engineering. Everything else about the
+  campaign is real: the same `evaluateQuote`, the same envelope, the same
+  budget. `source: 'synthetic'` rides into every audit row as a
   `[SYNTHETIC SEGMENT]` prefix, so a reader six months from now does not have to
   know how the demo was configured to tell whether these were real customers.
   Swapping in live data is the members array and the source tag.

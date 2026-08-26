@@ -236,3 +236,76 @@ authority. The defence lasts exactly one turn.
 review resets it. `guard_threshold` was added to the envelope so there is an
 intermediate state — going straight from full authority to zero leaves the agent
 no room to tighten before it has to stop conceding entirely.
+
+---
+
+## C7 — A Payment Link cannot authorize a specific order
+
+Not a claim from the design note — a claim the *implementation* made, which is
+worse, because it shipped and passed its tests.
+
+The live authorize path created a Payment Link, printed the `short_url`, and
+polled `GET /orders/{our_order}/payments` waiting for the payment to appear.
+
+**It never can.** `POST /payment_links` has no `order_id` field, in the request
+or the response — verified directly against the API:
+
+```
+link keys: accept_partial, allow_full_payment, amount, amount_paid,
+           cancelled_at, created_at, currency, customer, description,
+           expire_by, expired_at, first_min_partial_amount, id, notes,
+           notify, payment_plan, payments, reference_id, reminder_enable,
+           reminders, short_url, status, updated_at, upi_link, user_id,
+           whatsapp_link
+```
+
+A payment link mints its own order internally and exposes its own `payments`
+array. So a paid link produces a payment under an order we never created, while
+the order the gate signed sits at `status: created`, `attempts: 0`.
+
+**Why this is more than plumbing.** The whole §5.3 story is that *one* order is
+authorized and then captured, lapsed or refunded as a decaying option. An order
+nobody paid is not an option on anything. Had this shipped, the demo would have
+taken real money onto an order carrying none of the mandate's `notes` — no
+`offer_id`, no `envelope_id`, no `authorized_by` — and the audit trail would
+have pointed at an order with no payment on it.
+
+**Replacement:** Razorpay Checkout, which *does* accept `order_id`. The
+authorizer serves a Checkout page bound to the order from a throwaway loopback
+server, closed in a `finally`. The payment lands on our order, inherits its
+`payment_capture: 0`, and settles into `authorized` for the gate to act on.
+
+`rails.createPaymentLink` stays. It is a way to bill someone, which is a real
+money action; it is not a way to authorize a specific order.
+
+### What let this through
+
+The tests. They stubbed `fetch`, routed `/payment_links` and
+`/orders/order_ABC123/payments` to canned responses, and asserted that a payment
+link was created. Every assertion passed while describing a route that cannot
+exist, **because a stub will happily answer a request that reality never
+routes.** Mocking the transport meant the test could not observe the one fact
+that mattered: which order the human is actually paying.
+
+The replacements inject a fake *checkout host* rather than a fake network, and
+assert the binding — `checkout.shown[0].orderId === order.id` — plus a negative:
+the authorizer must not call `/payment_links` at all.
+
+### Two smaller findings from the same run
+
+**Opening Checkout on page load silently half-renders.** The overlay mounts
+before Checkout can draw into it, leaving a dimmed page with no modal and an
+empty console — no error, no warning. It is indistinguishable from a page that
+simply failed, and gives no reason to suspect the button underneath would work.
+It opens on a click now, and a test pins that.
+
+**`4111 1111 1111 1111` is Razorpay's *international* test card.** An Indian
+test account declines it:
+
+> Your payment could not be completed as this business accepts domestic
+> (Indian) card payments only.
+
+This arrives as a real, recorded, `failed` payment against the correct order —
+so the plumbing looks entirely healthy right up until it declines. The domestic
+card is `4100 2800 0000 1007`
+([Test Card Details](https://razorpay.com/docs/payments/payments/test-card-details/)).
