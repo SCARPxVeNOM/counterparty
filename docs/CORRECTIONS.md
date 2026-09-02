@@ -431,3 +431,30 @@ character of answer. The probe was too small, not the key.
 `GeminiProvider` now puts that diagnosis in the error itself — an empty response
 with `finishReason=MAX_TOKENS` reports the thinking-token count and says the key
 is fine — because the next person to hit it will otherwise spend the same hour.
+
+### And one bug that only a real run could find
+
+With the recordings committed and the replay test green, the console was still
+calling Gemini for every turn.
+
+`createProvider({ cassetteDir: 'cassettes/console' })` — a relative path. Next
+serves with cwd `apps/web`, vitest and the scripts run from the repo root. So one
+string named two directories: the test loaded 38 recordings and passed, and the
+console loaded zero, missed on every request, and wrote a second set of cassettes
+under `apps/web/` that nothing would ever read.
+
+Nothing errored. Nothing could have: in `live` mode a cassette miss is a
+perfectly good reason to call the model, which is the whole point of that mode.
+The test was not wrong and the console was not wrong; the path meant different
+things to each and neither was in a position to notice.
+
+It surfaced by driving the running console and comparing its reply to the
+recorded one word for word. They did not match. That is the only check that
+would have caught it — the test suite, the typechecker and the build were all
+green throughout, and a passing replay test is precisely the evidence that makes
+you stop looking.
+
+`fromRepoRoot()` in `packages/config` now anchors the path, and both callers read
+one exported constant. The general form of the lesson: a path shared across
+processes with different working directories is not a string, and a green test
+suite proves the test's environment, not the application's.

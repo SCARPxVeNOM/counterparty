@@ -345,6 +345,11 @@ behaviour you want from a fixture that can silently rot.
 Recording is idempotent: a cassette hit short-circuits before the network, so
 re-running costs nothing and fills only what is missing.
 
+The cassette directory is resolved from the repo root, not the working
+directory. That is not fussiness — Next serves the console with cwd `apps/web`,
+so a relative path named one folder to the test suite and a different, empty one
+to the console. It replayed nothing and said nothing about it. See C9.
+
 ---
 
 ## The twelve money actions

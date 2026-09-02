@@ -13,10 +13,20 @@
  * message nobody sends again is a recording that never replays.
  */
 
+import { fromRepoRoot } from '@counterparty/config';
 import type { Persona } from '@counterparty/agents';
 
-/** Must match apps/web/app/api/session/route.ts. */
-export const CONSOLE_CASSETTE_DIR = 'cassettes/console';
+/**
+ * Absolute, deliberately.
+ *
+ * This was `'cassettes/console'` and it cost an afternoon. Next serves the
+ * console with cwd `apps/web`, so the route resolved that to
+ * `apps/web/cassettes/console` — an empty directory — loaded zero recordings,
+ * and quietly called Gemini for every turn while the replay test passed from the
+ * repo root. Nothing errored, because in live mode a cassette miss is a
+ * perfectly good reason to call the model. One constant, one root, both callers.
+ */
+export const CONSOLE_CASSETTE_DIR = fromRepoRoot('cassettes', 'console');
 
 /** The console's default session id, so recorded keys match live ones. */
 export const CONSOLE_SESSION_ID = 'console';

@@ -123,6 +123,9 @@ importers:
       '@counterparty/agents':
         specifier: workspace:*
         version: link:../agents
+      '@counterparty/config':
+        specifier: workspace:*
+        version: link:../config
       '@counterparty/core':
         specifier: workspace:*
         version: link:../core

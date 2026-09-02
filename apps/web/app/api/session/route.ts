@@ -24,14 +24,20 @@ import { Session } from '@counterparty/agents';
 import { PERSONAS, type PersonaId } from '@counterparty/agents';
 import { createProvider, type LLMProvider } from '@counterparty/llm';
 import { MODELS, loadConfig, readiness } from '@counterparty/config';
-import { CATALOG, DEMO_MERCHANT, ScriptedSeller, demoBudget, demoMandate, gateKey } from '@counterparty/demo';
+import {
+  CATALOG,
+  CONSOLE_CASSETTE_DIR as CASSETTE_DIR,
+  DEMO_MERCHANT,
+  ScriptedSeller,
+  demoBudget,
+  demoMandate,
+  gateKey,
+} from '@counterparty/demo';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const sessions = new Map<string, Session>();
-
-const CASSETTE_DIR = 'cassettes/console';
 
 /**
  * Gemini when a key is configured, a rule-based stand-in otherwise.

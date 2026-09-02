@@ -65,13 +65,28 @@ export interface Config {
 }
 
 /** Walk up from this file to the repo root, which is where .env lives. */
-function repoRoot(): string {
+export function repoRoot(): string {
   let dir = dirname(fileURLToPath(import.meta.url));
   for (let depth = 0; depth < 8; depth += 1) {
     if (existsSync(join(dir, 'pnpm-workspace.yaml'))) return dir;
     dir = resolve(dir, '..');
   }
   return process.cwd();
+}
+
+/**
+ * A repo-relative path, resolved absolutely.
+ *
+ * Exists because a bare relative path means different directories to different
+ * callers. Next runs its server with cwd `apps/web`; vitest and the scripts run
+ * from the repo root. `'cassettes/console'` therefore named two different
+ * folders, and the console silently loaded zero recordings and wrote its own set
+ * under `apps/web/` — with no error anywhere, because a cassette miss in live
+ * mode is a legitimate reason to call the model. Anything shared between the
+ * console and a script goes through here.
+ */
+export function fromRepoRoot(...segments: readonly string[]): string {
+  return join(repoRoot(), ...segments);
 }
 
 export function parseEnvFile(contents: string): Record<string, string> {

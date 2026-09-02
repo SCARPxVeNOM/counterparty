@@ -10,6 +10,7 @@
   },
   "description": "The demo merchant: fixed keys, fixed clock, a catalog with one deliberately unconfident SKU, and a model-free selling agent.",
   "dependencies": {
+    "@counterparty/config": "workspace:*",
     "@counterparty/core": "workspace:*",
     "@counterparty/llm": "workspace:*",
     "@counterparty/agents": "workspace:*"
