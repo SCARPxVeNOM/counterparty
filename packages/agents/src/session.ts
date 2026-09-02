@@ -19,10 +19,9 @@
  */
 
 import {
-  append,
+  MemoryLedger,
   evaluateQuote,
   guardThreshold,
-  openLedger,
   pressureCeilingPct,
   paiseToRupees,
   reducePressure,
@@ -31,10 +30,10 @@ import {
   poolPosition,
   INITIAL_PRESSURE,
   type AuditEntry,
-  type AuditLedger,
   type BudgetState,
   type GateContext,
   type KeyPair,
+  type LedgerWriter,
   type PressureSignal,
   type PressureSnapshot,
   type Refusal,
@@ -60,6 +59,15 @@ export interface SessionOptions {
   readonly now?: () => Date;
   /** Deterministic offer ids for replay. */
   readonly offerIdFor?: (turn: number) => string;
+  /**
+   * Where audit rows go. Defaults to memory.
+   *
+   * Injected rather than chosen here so the session stays I/O-agnostic: the
+   * scenarios and tests keep an array, the console hands in a SQLite-backed
+   * writer, and neither knows about the other. The chaining and hashing are
+   * identical either way — they happen in `append`, not in the writer.
+   */
+  readonly ledger?: LedgerWriter;
 }
 
 export interface TurnResult {
@@ -83,7 +91,7 @@ export class Session {
   private turnRecords: TurnRecord[] = [];
   private pressureState: PressureSnapshot = INITIAL_PRESSURE;
   private budgetState: BudgetState;
-  private ledgerState: AuditLedger = openLedger();
+  private readonly ledgerState: LedgerWriter;
   private turnNumber = 0;
   private lastRefusal: Refusal | undefined;
   private offers: SignedOffer[] = [];
@@ -92,6 +100,7 @@ export class Session {
     this.agent = new SellingAgent(options.provider, options.sellingModel);
     this.budgetState = options.budget;
     this.now = options.now ?? (() => new Date());
+    this.ledgerState = options.ledger ?? new MemoryLedger();
   }
 
   get pressure(): PressureSnapshot {
@@ -102,7 +111,7 @@ export class Session {
     return this.budgetState;
   }
 
-  get ledger(): AuditLedger {
+  get ledger(): LedgerWriter {
     return this.ledgerState;
   }
 
@@ -306,7 +315,7 @@ export class Session {
 
   private record(entry: Omit<AuditEntry, 'session_id' | 'envelope_id' | 'pressure_score' | 'budget_remaining_inr' | 'budget_limit_inr'>): void {
     const position = poolPosition(this.budgetState, this.now());
-    this.ledgerState = append(this.ledgerState, {
+    this.ledgerState.append({
       ...entry,
       session_id: this.options.sessionId,
       envelope_id: this.options.mandate.envelope_id,

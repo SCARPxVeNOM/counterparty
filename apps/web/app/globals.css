@@ -147,6 +147,19 @@ h3 {
   color: var(--paper-faint);
 }
 
+/* The on-disk total sits beside the session count, dimmer, so the two read as
+   one fact seen at two scales rather than as two competing numbers. */
+.panel-head .count.persisted {
+  margin-left: var(--grid);
+  padding-left: var(--grid);
+  border-left: 1px solid var(--rule-bright);
+  color: var(--cyan-dim);
+}
+
+.panel-head .count.persisted.alarm {
+  color: var(--oxide);
+}
+
 .panel-body {
   overflow-y: auto;
   min-height: 0;

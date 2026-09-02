@@ -39,6 +39,7 @@ import {
   type ExtractionSource,
   type FixtureName,
 } from '@counterparty/extract';
+import { verifyLedgerFile } from '@counterparty/store';
 
 const OK = 'PASS';
 const NO = 'FAIL';
@@ -224,11 +225,27 @@ function verifyEnvelope(path: string): void {
 
 // ---------------------------------------------------------------------------
 
-function auditChain(path: string): void {
+/**
+ * Read rows from whichever kind of ledger this is.
+ *
+ * A `.db` is the console's live ledger, a `.json` is what `pnpm demo` writes.
+ * Both are the same rows and the same chain — the verifier below does not know
+ * or care which it was handed, which is the point of keeping chaining in pure
+ * core functions rather than in a storage layer.
+ */
+function loadRows(path: string): { rows: AuditRow[]; kind: string } {
+  if (path.endsWith('.db') || path.endsWith('.sqlite') || path.endsWith('.sqlite3')) {
+    const { rows } = verifyLedgerFile(path);
+    return { rows: [...rows], kind: 'SQLite' };
+  }
   const parsed = JSON.parse(readFileSync(path, 'utf8')) as { rows?: AuditRow[] } | AuditRow[];
-  const rows = Array.isArray(parsed) ? parsed : (parsed.rows ?? []);
+  return { rows: Array.isArray(parsed) ? parsed : (parsed.rows ?? []), kind: 'JSON' };
+}
 
-  console.log(`\nAudit ledger — ${rows.length} row(s)\n`);
+function auditChain(path: string): void {
+  const { rows, kind } = loadRows(path);
+
+  console.log(`\nAudit ledger (${kind}) — ${rows.length} row(s)\n`);
 
   if (process.argv.includes('--show')) {
     for (const row of rows) console.log(`${formatRow(row)}\n`);
@@ -399,8 +416,9 @@ counterparty — verify what a selling agent claims
   counterparty envelope <mandate.json> --merchant-key <public.pem>
       Check a selling mandate and print the authority it grants.
 
-  counterparty audit <ledger.json> [--show]
-      Recompute the hash chain over an audit ledger.
+  counterparty audit <ledger.json|ledger.db> [--show]
+      Recompute the hash chain over an audit ledger. Reads the JSON that
+      pnpm demo writes, or the console's live SQLite ledger (data/console.db).
 
   counterparty keys [--out <dir>]
       Generate a merchant and a gate keypair.

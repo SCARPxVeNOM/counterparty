@@ -132,6 +132,41 @@ export function append(ledger: AuditLedger, entry: AuditEntry): AuditLedger {
   return { rows: [...ledger.rows, { ...unhashed, hash: hashRow(unhashed) }] };
 }
 
+/**
+ * Somewhere rows can be appended to and read back from.
+ *
+ * Exists so the session does not care whether its ledger is an array in memory
+ * or a table on disk. `append` above is the pure function and stays pure; this
+ * is the mutable handle a long-running session holds.
+ *
+ * The interface is deliberately tiny and deliberately has no `update` and no
+ * `delete`. A ledger that can be revised is not evidence, and leaving those off
+ * the interface means no caller can even ask.
+ */
+export interface LedgerWriter {
+  append(entry: AuditEntry): AuditRow;
+  readonly rows: readonly AuditRow[];
+}
+
+/** The default: rows in an array, gone when the process is. */
+export class MemoryLedger implements LedgerWriter {
+  private state: AuditLedger = openLedger();
+
+  append(entry: AuditEntry): AuditRow {
+    this.state = append(this.state, entry);
+    const written = this.state.rows.at(-1);
+    if (written === undefined) {
+      // Unreachable: append always returns a ledger one row longer.
+      throw new Error('append produced no row');
+    }
+    return written;
+  }
+
+  get rows(): readonly AuditRow[] {
+    return this.state.rows;
+  }
+}
+
 export type ChainVerification =
   | { readonly ok: true; readonly rows: number }
   | {

@@ -458,3 +458,70 @@ you stop looking.
 one exported constant. The general form of the lesson: a path shared across
 processes with different working directories is not a string, and a green test
 suite proves the test's environment, not the application's.
+
+---
+
+## C10 — Persistence is where a hash chain is most likely to break itself
+
+**The plan's Phase 4** put the audit ledger in SQLite and moved on, as though
+storage were a detail. It is not, and the reason is specific to this design.
+
+Every row's hash is taken over the **canonical JSON of the row**. So the
+requirement on the storage layer is not "keep the data", it is "return an object
+that serializes to the identical bytes". Those sound like the same requirement
+and are not. Two ways they come apart, both of which SQLite will do to you
+without complaint:
+
+- **An absent optional field comes back as `null`.** `AuditRow` has fourteen
+  optional fields. A row written without `offer_id` must read back with no
+  `offer_id` key at all — not the key set to `null`, and not the key set to
+  `undefined`. Any of those three serialize differently, and two of them produce
+  a hash that does not match the one stored beside it.
+- **`clause_value` is `string | number`.** A `TEXT` column turns `15` into
+  `'15'`; a `REAL` column turns `'pre_auth'` into nonsense. It is stored as JSON
+  so the type survives the round trip.
+
+The failure mode is what makes this worth writing down. Get either wrong and the
+ledger verifies perfectly for as long as the process lives, then reports
+**tampering** the first time the file is reopened — on a ledger nobody touched.
+An integrity system whose most likely failure is a false accusation against its
+own operator is worse than no integrity system, because people learn to ignore
+it.
+
+So `fromColumns` builds its result by omission, which is why it reads as a pile
+of conditional spreads rather than an object literal, and there is a test that
+writes one row with every optional field set, one with none, and re-verifies
+after reopening the file.
+
+### Two defences, and only one of them is the real one
+
+The table refuses `UPDATE` and `DELETE` through triggers. This is genuinely
+useful and it is not the security property — anyone holding the file can drop a
+trigger, and `pnpm tamper:check` does exactly that to prove the point. What the
+triggers buy is that nothing edits this ledger *in passing*. What the chain buys
+is that an edit cannot go unnoticed, and it holds against an attacker with
+complete database access because it does not rely on the database.
+
+A defence that has only ever been tested with the other defence in place has not
+been measured. Hence `unsafeDropAppendOnlyGuard()`, named so it cannot appear in
+a diff without a reviewer noticing.
+
+### The bug that only showed up against the real file
+
+`tamper:check` works on a copy, because a script that corrupts the real ledger
+to make a point about ledger integrity would be a poor joke. The first version
+copied `data/console.db` with `copyFileSync` and got:
+
+```
+SqliteError: no such table: audit_rows
+```
+
+The ledger runs in **WAL mode** — chosen so an unclean shutdown mid-write costs
+a row rather than the file. WAL means recent writes live in `console.db-wal` and
+have not necessarily reached the main file. Nothing had checkpointed yet, so the
+copy contained not just no rows but no schema.
+
+`VACUUM INTO` asks SQLite for a consistent snapshot and lets it work out where
+the bytes currently are. The general form: a SQLite database in WAL mode is not
+one file, and any code that treats it as one is correct only until the moment it
+matters.

@@ -15,6 +15,7 @@
     "@counterparty/extract": "workspace:*",
     "@counterparty/llm": "workspace:*",
     "@counterparty/rails": "workspace:*",
+    "@counterparty/store": "workspace:*",
     "next": "^16.1.6",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"

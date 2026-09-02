@@ -52,7 +52,7 @@ matter, because saying is not committing.
 ```bash
 pnpm install
 pnpm demo          # four scenarios, headless, deterministic — no keys needed
-pnpm test          # 397 tests, no network, no model calls
+pnpm test          # 412 tests, no network, no model calls
 pnpm typecheck     # the compiler is part of the enforcement — see below
 pnpm dev           # the console at http://localhost:3939
 ```
@@ -257,23 +257,29 @@ packages/
   core/       pure domain, zero I/O — crypto, money, mandate, gate,
               pressure, budget, audit, catalog. 265 tests, no model calls.
   rails/      Razorpay adapter. Accepts only SignedOffer.        32 tests
-  llm/        provider interface, Gemini, cassette replay,
-              pressure classifier                                12 tests
+  llm/        provider interface, Gemini, retry and model
+              fallback, cassette replay, pressure classifier     20 tests
   agents/     selling agent, buyer personas, the session         35 tests
   extract/    two readers — storefront markup and Razorpay
               Payment Page JSON — plus source-derived confidence 32 tests
+  store/      SQLite for the audit ledger; append-only at the
+              database level                                     15 tests
   demo/       fixed keys, fixed clock, model-free selling agent
   config/     model routing and env, in one place
 apps/
   web/        the console, and /onboard
   cli/        verify · envelope · audit · keys · onboard · replay
 scenarios/    four demo scenarios, runnable whole or one at a time
-scripts/      smoke-live · settle-order · refund-payment · checkout-debug
+scripts/      smoke-live · settle-order · refund-payment ·
+              record-cassettes · tamper-ledger
 docs/         CORRECTIONS.md — claims that did not survive contact
 ```
 
 `packages/core` is I/O-free on purpose: every clause is testable without a
-network, a database or a model.
+network, a database or a model. `store/` is where the database lives, and core
+does not import it — the ledger interface core defines has an `append` and a
+`rows`, and no `update` and no `delete`. A ledger that can be revised is not
+evidence, and leaving those off the interface means no caller can even ask.
 
 ---
 
@@ -326,6 +332,38 @@ pnpm tsx scripts/settle-order.ts order_XXXXXXXX
 That rebuilds a mandate, asks the gate to price the same basket, and **refuses to
 capture unless the gate independently re-derives the same total to the paisa.**
 An authorized payment is not authority to take the money; the signature is.
+
+### The ledger on disk
+
+```bash
+pnpm cli audit data/console.db      # verify the console's live ledger
+pnpm tamper:check                   # try to rewrite it, twice, and fail twice
+```
+
+The console writes every audit row to `data/console.db` — one chain across every
+session, deliberately. A file per session would let an entire session be deleted
+without leaving a gap anywhere, which is precisely the edit a chain exists to
+make visible. Sessions are a `session_id` column, not a separate ledger.
+
+The table is append-only at the database level: triggers refuse `UPDATE` and
+`DELETE` outright. That is the weaker of the two defences — anyone holding the
+file can drop a trigger — and its job is to make sure nothing edits this ledger
+in passing. The hash chain is the one that matters, and it does not depend on the
+database at all. `pnpm tamper:check` runs the attack against a snapshot and shows
+both:
+
+```
+1. An ordinary UPDATE, as someone holding the file:
+   PASS  refused by the database: audit_rows is append-only: rows cannot be updated
+
+2. Now drop the guard and edit anyway:
+   PASS  bad_hash at row 1
+         row 1 stores 7416e7a011698fad… but its content hashes to 7b2a3c7e91eedf92…
+```
+
+The edit succeeds and changes nothing about whether it is believed. The ledger
+does not have to be unwritable; it has to be unable to lie about having been
+written to.
 
 ### Recording the model
 
@@ -554,7 +592,33 @@ honest.
   budget and the audit chain are not downstream of the model, so replay weakens
   nothing. See C9 for what the live run cost and taught.
 
+- **The audit ledger persists.** It did not, for most of this build: the whole
+  chain lived in an array, so restarting the console erased the record whose
+  entire purpose is to outlive the thing that wrote it. `packages/store` now
+  backs it with SQLite, append-only at the database level, verified end to end
+  after every restart. Proven the only way worth proving it: two negotiations
+  through the running console, kill the process, restart, and the chain
+  continues from row 7 rather than beginning again at row 1.
+
+  What did **not** change is where hashing happens. Chaining and verification
+  are still the same pure functions in `packages/core`, over the same canonical
+  bytes; the store calls `append` and writes down what it returned. A test feeds
+  identical entries to the in-memory ledger and the SQLite one and asserts the
+  rows are byte-identical — persistence that recomputed hashes would be a second
+  implementation of the property the first one exists to guarantee.
+
 - **Subscription pause/resume has not run live.** It needs a subscription in
   `active`, and a freshly created one sits at `created` until a customer
   authorizes the mandate — another human card tap. The calls are implemented and
   stub-tested.
+
+- **The full refund has not been fired at live money.** Deliberately. It is the
+  same `rails.refund` call as the partial one, which *has* run for real
+  (`rfnd_TUTgRaSA1TN6cr`, ₹500, `simulated=false`), differing only in
+  `is_partial`. Firing it would destroy the completed-sale artifact that
+  `pay_TUQ7MKc8zXf1gE` currently is, to demonstrate a code path one boolean away
+  from one already demonstrated. That trade is not worth making.
+
+- **The campaign cohort is synthetic.** Every audit row says so, in the row
+  itself, as a `[SYNTHETIC SEGMENT]` prefix. Everything around it — the gate,
+  the envelope, the shared budget — is the real thing.

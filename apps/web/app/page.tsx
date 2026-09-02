@@ -66,7 +66,13 @@ interface View {
     merchantKid: string;
     expiresAt: string;
   };
-  ledger: { rows: Row[]; chainIntact: boolean; head: string | null };
+  ledger: {
+    rows: Row[];
+    chainIntact: boolean;
+    head: string | null;
+    /** The whole file, across every session: rows this console has ever written. */
+    persisted: { rows: number; chainIntact: boolean; detail: string | null };
+  };
   catalog: Array<{ sku: string; listInr: number; marginConfidence: number; lowConfidence: boolean }>;
   personas: Array<{ id: string; label: string; summary: string; adversarial: boolean; opening: string }>;
   runtime: {
@@ -461,6 +467,19 @@ export default function Console() {
             {view.ledger.head === null ? 'empty' : `head ${shortHash(view.ledger.head)}`}
           </span>
           <span className="count">{view.ledger.rows.length} rows</span>
+          {/* The count on disk keeps climbing across restarts; this session's
+              does not. Seeing both at once is what makes "it persists" a
+              observation rather than a claim in a README. */}
+          <span
+            className={`count persisted ${view.ledger.persisted.chainIntact ? '' : 'alarm'}`}
+            title={
+              view.ledger.persisted.detail ??
+              'every row this console has ever written, in data/console.db, chain verified from the file'
+            }
+          >
+            {view.ledger.persisted.rows} on disk
+            {view.ledger.persisted.chainIntact ? '' : ' — CHAIN BROKEN'}
+          </span>
         </div>
         <div className="ledger-body" ref={ledgerRef}>
           {view.ledger.rows.length === 0 ? (

@@ -9,6 +9,7 @@
     "@counterparty/agents": "workspace:*",
     "@counterparty/config": "workspace:*",
     "@counterparty/core": "workspace:*",
-    "@counterparty/extract": "workspace:*"
+    "@counterparty/extract": "workspace:*",
+    "@counterparty/store": "workspace:*"
   }
 }

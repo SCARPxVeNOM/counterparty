@@ -2,6 +2,7 @@ export {
   AUDIT_ACTIONS,
   GENESIS_HASH,
   MONEY_ACTIONS,
+  MemoryLedger,
   append,
   formatLedger,
   formatRow,
@@ -13,5 +14,6 @@ export {
   type AuditLedger,
   type AuditRow,
   type ChainVerification,
+  type LedgerWriter,
   type MoneyAction,
 } from './ledger';

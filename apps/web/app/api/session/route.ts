@@ -23,7 +23,8 @@ import {
 import { Session } from '@counterparty/agents';
 import { PERSONAS, type PersonaId } from '@counterparty/agents';
 import { createProvider, type LLMProvider } from '@counterparty/llm';
-import { MODELS, loadConfig, readiness } from '@counterparty/config';
+import { MODELS, fromRepoRoot, loadConfig, readiness } from '@counterparty/config';
+import { SqliteLedger } from '@counterparty/store';
 import {
   CATALOG,
   CONSOLE_CASSETTE_DIR as CASSETTE_DIR,
@@ -61,6 +62,26 @@ function providerFor(): { provider: LLMProvider; agentMode: 'gemini' | 'scripted
   return { provider: createProvider({ cassetteDir: CASSETTE_DIR }).provider, agentMode: 'gemini' };
 }
 
+/**
+ * One ledger file for the whole console, opened once.
+ *
+ * Deliberately not one file per session. The chain is only worth something if it
+ * spans everything written — a per-session file would let an entire session be
+ * deleted without leaving a gap anywhere, which is precisely the edit a chain
+ * exists to make visible. Sessions are a `session_id` column.
+ *
+ * The negotiation state itself stays in memory and a reload still starts a clean
+ * negotiation, which is what anyone driving a demo console wants. What survives
+ * is the record of what was decided, which is the thing that is supposed to
+ * outlive the process that decided it.
+ */
+let ledgerHandle: SqliteLedger | undefined;
+
+function ledger(): SqliteLedger {
+  ledgerHandle ??= new SqliteLedger({ path: fromRepoRoot('data', 'console.db') });
+  return ledgerHandle;
+}
+
 function sessionFor(id: string): Session {
   const existing = sessions.get(id);
   if (existing !== undefined) return existing;
@@ -77,6 +98,7 @@ function sessionFor(id: string): Session {
     sellingModel: MODELS.sellingAgent,
     classifierModel: MODELS.pressureClassifier,
     merchantName: DEMO_MERCHANT,
+    ledger: ledger(),
   });
   sessions.set(id, session);
   return session;
@@ -85,8 +107,19 @@ function sessionFor(id: string): Session {
 function view(session: Session, id: string) {
   const mandate = demoMandate();
   const pressure = session.pressure;
-  const rows: AuditRow[] = [...session.ledger.rows];
+
+  /**
+   * This session's rows for the panel; the whole file for the verdict.
+   *
+   * Those are two different questions and conflating them would weaken both.
+   * The panel is showing one negotiation, so it shows one negotiation. The
+   * chain, though, only means anything verified end to end — checking just this
+   * session's slice would happily pass over a file with an earlier session
+   * deleted, which is exactly the edit worth catching.
+   */
+  const rows: AuditRow[] = [...ledger().forSession(id)];
   const chain = verifyChain(rows);
+  const wholeFile = ledger().verify();
   const config = loadConfig();
 
   const ceiling = pressureCeilingPct(pressure.state, mandate.authority.max_discount_depth_pct);
@@ -152,6 +185,17 @@ function view(session: Session, id: string) {
       })),
       chainIntact: chain.ok,
       head: rows.at(-1)?.hash ?? null,
+      /**
+       * What is on disk, across every session this console has run.
+       *
+       * Surfaced because "the ledger persists" is a claim, and a number that
+       * keeps climbing after a restart is the cheapest possible proof of it.
+       */
+      persisted: {
+        rows: ledger().size,
+        chainIntact: wholeFile.ok,
+        detail: wholeFile.ok ? null : wholeFile.detail,
+      },
     },
     catalog: [...CATALOG.values()].map((sku) => ({
       sku: sku.sku,

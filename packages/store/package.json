@@ -1,0 +1,19 @@
+{
+  "name": "@counterparty/store",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "description": "SQLite persistence for the hash-chained audit ledger. Append-only at the database level.",
+  "dependencies": {
+    "@counterparty/core": "workspace:*",
+    "better-sqlite3": "^13.0.3"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0"
+  }
+}
