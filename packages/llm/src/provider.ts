@@ -50,11 +50,22 @@ export interface LLMProvider {
 
 export class LlmError extends Error {
   override readonly name = 'LlmError';
+  /**
+   * The HTTP status, when the failure came from the API rather than from us.
+   *
+   * Carried because the difference between 503 and 401 is the difference
+   * between "wait a moment" and "your key is wrong", and a caller that only
+   * sees a message string has to guess. See retry.ts, which does not guess.
+   */
+  readonly status?: number;
+
   constructor(
     message: string,
     readonly code: 'NO_API_KEY' | 'CASSETTE_MISS' | 'BAD_JSON' | 'EMPTY_RESPONSE' | 'PROVIDER_ERROR',
+    options: { readonly status?: number } = {},
   ) {
     super(message);
+    if (options.status !== undefined) this.status = options.status;
   }
 }
 

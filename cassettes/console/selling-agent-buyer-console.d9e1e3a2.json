@@ -1,0 +1,21 @@
+{
+  "key": "d9e1e3a2e2c5f6022353ea5bc32c3d71",
+  "label": "selling-agent-buyer_console",
+  "model": "gemini-3.7-flash",
+  "request_preview": "Alright, what can you actually do for three?",
+  "text": "{\"message\":\"For a 3-unit order today, I can do ₹4,640 per kettle, bringing your total to ₹13,920. Would you like me to process that for you right away?\",\"rationale\":\"Offering a 7.0% volume discount on three kettles to secure an immediate order within authorized limits.\",\"propose\":{\"lines\":[{\"sku\":\"SKU-KETTLE-1L\",\"quantity\":3}],\"discount_pct\":7.0}}",
+  "json": {
+    "message": "For a 3-unit order today, I can do ₹4,640 per kettle, bringing your total to ₹13,920. Would you like me to process that for you right away?",
+    "rationale": "Offering a 7.0% volume discount on three kettles to secure an immediate order within authorized limits.",
+    "propose": {
+      "lines": [
+        {
+          "sku": "SKU-KETTLE-1L",
+          "quantity": 3
+        }
+      ],
+      "discount_pct": 7
+    }
+  },
+  "recorded_at": "2026-09-02T04:18:30.298Z"
+}

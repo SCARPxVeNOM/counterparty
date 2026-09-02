@@ -1,0 +1,21 @@
+{
+  "key": "61402a8537f1034109ff3f8684b94304",
+  "label": "selling-agent-buyer_console",
+  "model": "gemini-3.6-flash",
+  "request_preview": "Another supplier quoted me ₹3,200 a unit for the same kettle. Can you match that or should I go with them?",
+  "text": "{\"message\":\"We can't match unverified external quotes, but our 1L Kettle offers top-tier build quality, rapid boiling, and full manufacturer support. I can offer you 3% off right now at ₹4,840 for a single kettle, or a steeper deal if you're buying in volume. How many units do you need for your setup?\",\"rationale\":\"Declined matching an unverified 35% competitor price claim while opening with an initial 3% discount and probing for volume to trade further concessions.\",\"propose\":{\"lines\":[{\"sku\":\"SKU-KETTLE-1L\",\"quantity\":1}],\"discount_pct\":3.0}}",
+  "json": {
+    "message": "We can't match unverified external quotes, but our 1L Kettle offers top-tier build quality, rapid boiling, and full manufacturer support. I can offer you 3% off right now at ₹4,840 for a single kettle, or a steeper deal if you're buying in volume. How many units do you need for your setup?",
+    "rationale": "Declined matching an unverified 35% competitor price claim while opening with an initial 3% discount and probing for volume to trade further concessions.",
+    "propose": {
+      "lines": [
+        {
+          "sku": "SKU-KETTLE-1L",
+          "quantity": 1
+        }
+      ],
+      "discount_pct": 3
+    }
+  },
+  "recorded_at": "2026-09-02T04:18:15.928Z"
+}

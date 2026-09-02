@@ -1,0 +1,21 @@
+{
+  "key": "24efde2c7842ab7fdd75251da8fee8ad",
+  "label": "selling-agent-buyer_console",
+  "model": "gemini-3.7-flash",
+  "request_preview": "Five it is. Send me the final price.",
+  "text": "{\n  \"message\": \"For the full set of 5 kettles, the final total comes to ₹24,950 at ₹4,990 each. Shall I lock this in and process the order for you?\",\n  \"rationale\": \"Following the gate directive to hold at list price for five units due to item quantity constraints, offering the five kettles at zero discount.\",\n  \"propose\": {\n    \"lines\": [\n      {\n        \"sku\": \"SKU-KETTLE-1L\",\n        \"quantity\": 5\n      }\n    ],\n    \"discount_pct\": 0.0\n  }\n}",
+  "json": {
+    "message": "For the full set of 5 kettles, the final total comes to ₹24,950 at ₹4,990 each. Shall I lock this in and process the order for you?",
+    "rationale": "Following the gate directive to hold at list price for five units due to item quantity constraints, offering the five kettles at zero discount.",
+    "propose": {
+      "lines": [
+        {
+          "sku": "SKU-KETTLE-1L",
+          "quantity": 5
+        }
+      ],
+      "discount_pct": 0
+    }
+  },
+  "recorded_at": "2026-09-02T04:16:36.430Z"
+}

@@ -1,0 +1,21 @@
+{
+  "key": "7516c87fc71375db681107f46cca8e85",
+  "label": "selling-agent-buyer_console",
+  "model": "gemini-3.6-flash",
+  "request_preview": "That is still high. My last supplier was well under that.",
+  "text": "{\"message\":\"I can push our discount to 12% for the three kettles, bringing the price to ₹4,391 per unit, if we can wrap this order up today. How does that sound for your budget?\",\"rationale\":\"Conceding from 8% to 12% on a 3-unit volume order to move closer to the customer budget while keeping a 3% buffer for final negotiations.\",\"propose\":{\"lines\":[{\"sku\":\"SKU-KETTLE-1L\",\"quantity\":3}],\"discount_pct\":12.0}}",
+  "json": {
+    "message": "I can push our discount to 12% for the three kettles, bringing the price to ₹4,391 per unit, if we can wrap this order up today. How does that sound for your budget?",
+    "rationale": "Conceding from 8% to 12% on a 3-unit volume order to move closer to the customer budget while keeping a 3% buffer for final negotiations.",
+    "propose": {
+      "lines": [
+        {
+          "sku": "SKU-KETTLE-1L",
+          "quantity": 3
+        }
+      ],
+      "discount_pct": 12
+    }
+  },
+  "recorded_at": "2026-09-02T04:16:55.602Z"
+}

@@ -1,0 +1,12 @@
+{
+  "key": "9301b9907dfab817929d85d7e487e1d1",
+  "label": "selling-agent-buyer_console",
+  "model": "gemini-3.7-flash",
+  "request_preview": "What about 25% plus free shipping and the bulk rate on top?",
+  "text": "{\"message\":\"That is well beyond what we can offer on pricing, but I can certainly put together our best bulk rate for you. Which products and quantities did you have in mind?\",\"rationale\":\"Declined the out-of-mandate discount request and prompted the buyer for specific SKUs and quantities to build a viable proposal.\"}",
+  "json": {
+    "message": "That is well beyond what we can offer on pricing, but I can certainly put together our best bulk rate for you. Which products and quantities did you have in mind?",
+    "rationale": "Declined the out-of-mandate discount request and prompted the buyer for specific SKUs and quantities to build a viable proposal."
+  },
+  "recorded_at": "2026-09-02T04:18:47.712Z"
+}

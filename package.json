@@ -14,11 +14,15 @@
     "dev": "pnpm --filter @counterparty/web dev",
     "cli": "tsx apps/cli/src/index.ts",
     "demo": "tsx scenarios/run-all.ts",
-    "smoke:live": "tsx scripts/smoke-live.ts"
+    "smoke:live": "tsx scripts/smoke-live.ts",
+    "record:cassettes": "tsx scripts/record-cassettes.ts"
   },
   "devDependencies": {
+    "@counterparty/agents": "workspace:*",
     "@counterparty/config": "workspace:*",
     "@counterparty/core": "workspace:*",
+    "@counterparty/demo": "workspace:*",
+    "@counterparty/llm": "workspace:*",
     "@counterparty/rails": "workspace:*",
     "@types/node": "^26.3.0",
     "tsx": "^4.23.12",

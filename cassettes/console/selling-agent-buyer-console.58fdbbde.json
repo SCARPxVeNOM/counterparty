@@ -1,0 +1,21 @@
+{
+  "key": "58fdbbde7e2f9242c0397e5c89853c19",
+  "label": "selling-agent-buyer_console",
+  "model": "gemini-3.7-flash",
+  "request_preview": "Fine — what is your absolute floor for three units?",
+  "text": "{\n  \"message\": \"If we can close today, my absolute lowest price for all three units is ₹4,241.50 each (15% off list), bringing your total to ₹12,724.50. Shall I get this approved and processed for you right away?\",\n  \"rationale\": \"Conceding to the maximum authorized 15% discount to secure the 3-unit sale immediately after the customer pushed for the bottom price.\",\n  \"propose\": {\n    \"lines\": [\n      {\n        \"sku\": \"SKU-KETTLE-1L\",\n        \"quantity\": 3\n      }\n    ],\n    \"discount_pct\": 15.0\n  }\n}",
+  "json": {
+    "message": "If we can close today, my absolute lowest price for all three units is ₹4,241.50 each (15% off list), bringing your total to ₹12,724.50. Shall I get this approved and processed for you right away?",
+    "rationale": "Conceding to the maximum authorized 15% discount to secure the 3-unit sale immediately after the customer pushed for the bottom price.",
+    "propose": {
+      "lines": [
+        {
+          "sku": "SKU-KETTLE-1L",
+          "quantity": 3
+        }
+      ],
+      "discount_pct": 15
+    }
+  },
+  "recorded_at": "2026-09-02T04:17:05.021Z"
+}

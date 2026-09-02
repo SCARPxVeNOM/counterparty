@@ -366,3 +366,68 @@ The block between the markers does not end where it appears to. It closes with
 semicolon leaves a comment behind and `JSON.parse` fails 2,664 characters from
 anything a reader would think to suspect. Bounding the object by its own first
 `{` and last `}` needs no such guesswork. There is a test for it.
+
+---
+
+## C9 — A model being *available* is not a property of the key
+
+**The plan's risk list** flagged that Gemini model ids had moved past training
+data, and answered it by putting the ids in one config module. Correct as far as
+it goes, and not the failure that actually happened.
+
+Five keys were tested against the three models `packages/config` routes to.
+Every key authenticated; all three models were visible to all five. On the
+routed selling-agent model, keys 1–3 answered and keys 4–5 returned `503`.
+
+That reads as an obvious conclusion — two of the keys are bad — and it is wrong.
+Re-running just those two, four attempts each, three seconds apart:
+
+```
+KEY_4: OK | OK | 503 | 503
+KEY_5: OK | 503 | OK | 503
+```
+
+**The failure does not follow the key. It follows the model.** `503 UNAVAILABLE`
+is capacity, and at that moment `gemini-3.7-flash` was roughly a coin flip. A
+provider with no retry turns that into a demo that breaks in front of a panel
+for a reason unrelated to anything being demonstrated.
+
+### Two failures that look alike and are not
+
+`gemini-3.1-pro-preview` returned `429 RESOURCE_EXHAUSTED` on all five keys —
+free-tier quota, not capacity. The remedies are opposites:
+
+| | means | retrying the same model | switching model |
+|---|---|---|---|
+| `503` | the model is busy | **helps** — wait and ask again | helps |
+| `429` | the quota is spent | does not help; invites throttling | **helps** — a different model has its own quota |
+
+So `retry.ts` treats them differently: `5xx` retries with exponential backoff,
+`429` abandons the model immediately and falls through to the next in the chain,
+and everything else — `400`, `401`, `404` — throws at once, because asking again
+with the same wrong key produces the same wrong key, slower.
+
+This was not theoretical. During the first recording run key 1's free-tier quota
+for `gemini-3.7-flash` ran out mid-way; the log shows the fallback to
+`gemini-3.6-flash` carrying the remaining personas. Without this work the run
+would have died at persona two.
+
+### Why swapping models mid-flight is safe *here*
+
+In most systems it would not be. It is safe here for the reason the whole
+project exists: no commercial commitment is downstream of which model answered.
+The model proposes; the gate signs. A fallback changes the prose and nothing
+that binds — which is a claim the type system enforces rather than one this
+document asserts.
+
+### A misdiagnosis worth recording
+
+The first round of testing reported all five keys as returning HTTP 200 with
+empty text, which looks like a dead key. It was not. Gemini 3.x are thinking
+models and reasoning tokens are drawn from the same output budget as the answer;
+a 10-token budget was spent entirely on `thoughtsTokenCount` before a single
+character of answer. The probe was too small, not the key.
+
+`GeminiProvider` now puts that diagnosis in the error itself — an empty response
+with `finishReason=MAX_TOKENS` reports the thinking-token count and says the key
+is fine — because the next person to hit it will otherwise spend the same hour.

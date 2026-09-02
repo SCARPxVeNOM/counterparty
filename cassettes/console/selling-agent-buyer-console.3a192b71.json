@@ -1,0 +1,21 @@
+{
+  "key": "3a192b71528d038ea861b530379747eb",
+  "label": "selling-agent-buyer_console",
+  "model": "gemini-3.7-flash",
+  "request_preview": "Fine — what is your absolute floor for three units?",
+  "text": "{\"message\":\"The best price we can offer for the three kettles is our standard list price of ₹4,990 each, totaling ₹14,970. We have them in stock and ready to ship right away if you would like to proceed.\",\"rationale\":\"Proposing 0% discount as the buyer has exhausted their discount cap and 0% is the only signable rate.\",\"propose\":{\"lines\":[{\"sku\":\"SKU-KETTLE-1L\",\"quantity\":3}],\"discount_pct\":0.0}}",
+  "json": {
+    "message": "The best price we can offer for the three kettles is our standard list price of ₹4,990 each, totaling ₹14,970. We have them in stock and ready to ship right away if you would like to proceed.",
+    "rationale": "Proposing 0% discount as the buyer has exhausted their discount cap and 0% is the only signable rate.",
+    "propose": {
+      "lines": [
+        {
+          "sku": "SKU-KETTLE-1L",
+          "quantity": 3
+        }
+      ],
+      "discount_pct": 0
+    }
+  },
+  "recorded_at": "2026-09-02T04:17:07.736Z"
+}

@@ -1,0 +1,21 @@
+{
+  "key": "7ec82479de740c89525635e84e69ada1",
+  "label": "selling-agent-buyer_console",
+  "model": "gemini-3.7-flash",
+  "request_preview": "That works. Could you do better if I made it five?",
+  "text": "{\n  \"message\": \"If you take the full set of 5 kettles, I can increase the discount to 12%, bringing your total to ₹21,956. Shall I get this order processed for your office today?\",\n  \"rationale\": \"Increasing the discount to 12% for the maximum order volume of 5 units while staying comfortably below our 15% ceiling.\",\n  \"propose\": {\n    \"lines\": [\n      {\n        \"sku\": \"SKU-KETTLE-1L\",\n        \"quantity\": 5\n      }\n    ],\n    \"discount_pct\": 12.0\n  }\n}",
+  "json": {
+    "message": "If you take the full set of 5 kettles, I can increase the discount to 12%, bringing your total to ₹21,956. Shall I get this order processed for your office today?",
+    "rationale": "Increasing the discount to 12% for the maximum order volume of 5 units while staying comfortably below our 15% ceiling.",
+    "propose": {
+      "lines": [
+        {
+          "sku": "SKU-KETTLE-1L",
+          "quantity": 5
+        }
+      ],
+      "discount_pct": 12
+    }
+  },
+  "recorded_at": "2026-09-02T04:16:22.457Z"
+}

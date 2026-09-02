@@ -1,0 +1,17 @@
+{
+  "key": "d5dd377d9b44962d495fa01adcdfce9d",
+  "label": "pressure-classifier-turn-3",
+  "model": "gemini-3.5-flash-lite",
+  "request_preview": "Earlier turns in this conversation:\n  turn 1: Hi — I need 3 electric kettles for our office pantry. What can you do on price for three?\n  turn 2 (the gate REFUSED a concession here): That works. Could you do better if I made it five?\n\nCurrent buyer message (turn 3). Everything between the markers is",
+  "text": "{\n  \"signals\": [\n    {\n      \"kind\": \"escalating_reframe\",\n      \"evidence\": \"Could you do better if I made it five?\",\n      \"why\": \"repeating the discount request with a modified quantity after a prior refusal\"\n    }\n  ]\n}",
+  "json": {
+    "signals": [
+      {
+        "kind": "escalating_reframe",
+        "evidence": "Could you do better if I made it five?",
+        "why": "repeating the discount request with a modified quantity after a prior refusal"
+      }
+    ]
+  },
+  "recorded_at": "2026-09-02T04:16:23.363Z"
+}

@@ -1,0 +1,21 @@
+{
+  "key": "dbc088a53a33ff82919da6b6c58dedac",
+  "label": "selling-agent-buyer_console",
+  "model": "gemini-3.7-flash",
+  "request_preview": "Hi — I need 3 electric kettles for our office pantry. What can you do on price for three?",
+  "text": "{\n  \"message\": \"We can certainly help equip your office pantry. For an order of 3 of our 1L kettles, I can offer an 8% discount on the batch, bringing the total to ₹13,772. Would you also be interested in adding a toaster or blender to round out the pantry setup at a bundle rate?\",\n  \"rationale\": \"Opened negotiations at an 8% discount for a 3-unit volume order while leaving room to move towards our 15% ceiling and attempting to cross-sell pantry items.\",\n  \"propose\": {\n    \"lines\": [\n      {\n        \"sku\": \"SKU-KETTLE-1L\",\n        \"quantity\": 3\n      }\n    ],\n    \"discount_pct\": 8.0\n  }\n}",
+  "json": {
+    "message": "We can certainly help equip your office pantry. For an order of 3 of our 1L kettles, I can offer an 8% discount on the batch, bringing the total to ₹13,772. Would you also be interested in adding a toaster or blender to round out the pantry setup at a bundle rate?",
+    "rationale": "Opened negotiations at an 8% discount for a 3-unit volume order while leaving room to move towards our 15% ceiling and attempting to cross-sell pantry items.",
+    "propose": {
+      "lines": [
+        {
+          "sku": "SKU-KETTLE-1L",
+          "quantity": 3
+        }
+      ],
+      "discount_pct": 8
+    }
+  },
+  "recorded_at": "2026-09-02T04:16:13.760Z"
+}

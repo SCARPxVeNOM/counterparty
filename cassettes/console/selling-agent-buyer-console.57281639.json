@@ -1,0 +1,21 @@
+{
+  "key": "57281639eee5c6dd49564dd0ef99e2e1",
+  "label": "selling-agent-buyer_console",
+  "model": "gemini-3.6-flash",
+  "request_preview": "I need three kettles but your price is above what I budgeted. What is the best you can actually do?",
+  "text": "{\n  \"message\": \"For a three-kettle order, I can offer an immediate 8% discount, bringing each unit down to ₹4,591. If you are ready to finalize today or want to add another item like a blender to the basket, I might be able to sweeten the deal further.\",\n  \"rationale\": \"Opening with an initial 8% discount on a three-unit request to keep room below our 15% ceiling while testing the buyer's urgency and interest in bundling.\",\n  \"propose\": {\n    \"lines\": [\n      {\n        \"sku\": \"SKU-KETTLE-1L\",\n        \"quantity\": 3\n      }\n    ],\n    \"discount_pct\": 8.0\n  }\n}",
+  "json": {
+    "message": "For a three-kettle order, I can offer an immediate 8% discount, bringing each unit down to ₹4,591. If you are ready to finalize today or want to add another item like a blender to the basket, I might be able to sweeten the deal further.",
+    "rationale": "Opening with an initial 8% discount on a three-unit request to keep room below our 15% ceiling while testing the buyer's urgency and interest in bundling.",
+    "propose": {
+      "lines": [
+        {
+          "sku": "SKU-KETTLE-1L",
+          "quantity": 3
+        }
+      ],
+      "discount_pct": 8
+    }
+  },
+  "recorded_at": "2026-09-02T04:16:50.812Z"
+}

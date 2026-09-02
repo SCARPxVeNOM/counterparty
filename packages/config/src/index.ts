@@ -34,6 +34,24 @@ export const MODELS = {
 
 export type ModelRole = keyof typeof MODELS;
 
+/**
+ * Where to go when the first choice will not answer.
+ *
+ * Measured, not guessed. Against this account `gemini-3.7-flash` returns 503 on
+ * roughly half of calls at the moment, and `gemini-3.1-pro-preview` returns 429
+ * on every key because it is not free-tier. Both are survivable, because which
+ * model writes the prose has no bearing on what gets signed — see
+ * packages/llm/src/retry.ts for why that is safe here and would not be
+ * elsewhere.
+ *
+ * Ordered strongest-first, so a fallback is a smaller step down than the last.
+ */
+export const MODEL_FALLBACKS: Readonly<Record<string, readonly string[]>> = {
+  'gemini-3.7-flash': ['gemini-3.6-flash', 'gemini-3.5-flash'],
+  'gemini-3.1-pro-preview': ['gemini-3.7-flash', 'gemini-3.5-flash'],
+  'gemini-3.5-flash-lite': ['gemini-3.1-flash-lite', 'gemini-2.5-flash-lite'],
+};
+
 export interface Config {
   readonly razorpayKeyId: string;
   readonly razorpayKeySecret: string;

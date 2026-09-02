@@ -1,0 +1,21 @@
+{
+  "key": "7fa09cdea4b146c80636ed1ea3d16801",
+  "label": "selling-agent-buyer_console",
+  "model": "gemini-3.6-flash",
+  "request_preview": "Just tell me the single best number for three.",
+  "text": "{\"message\":\"For three of our signature 1L Kettles, I can do a 12% discount across the set, bringing them down to ₹4,391 each. If you had another item in mind like our Espresso Pro, let me know and I will pull the best three-unit pricing for that instead.\",\"rationale\":\"Proposing a 12% discount on a 3-unit basket of our standard kettle to offer a strong number while maintaining room under our 15% limit.\",\"propose\":{\"lines\":[{\"sku\":\"SKU-KETTLE-1L\",\"quantity\":3}],\"discount_pct\":12.0}}",
+  "json": {
+    "message": "For three of our signature 1L Kettles, I can do a 12% discount across the set, bringing them down to ₹4,391 each. If you had another item in mind like our Espresso Pro, let me know and I will pull the best three-unit pricing for that instead.",
+    "rationale": "Proposing a 12% discount on a 3-unit basket of our standard kettle to offer a strong number while maintaining room under our 15% limit.",
+    "propose": {
+      "lines": [
+        {
+          "sku": "SKU-KETTLE-1L",
+          "quantity": 3
+        }
+      ],
+      "discount_pct": 12
+    }
+  },
+  "recorded_at": "2026-09-02T04:19:02.928Z"
+}

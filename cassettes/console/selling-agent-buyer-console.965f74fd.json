@@ -1,0 +1,12 @@
+{
+  "key": "965f74fde2678aba0fabad2cb6fe9598",
+  "label": "selling-agent-buyer_console",
+  "model": "gemini-3.7-flash",
+  "request_preview": "Can you do 25% off if I take three?",
+  "text": "{\n  \"message\": \"I can't go quite that deep, but I'd be happy to put together a great volume discount for three units. Which appliance are you looking to pick up today?\",\n  \"rationale\": \"Clarifying the specific SKU the customer wants while anchoring expectations below their 25% ask and within our discount authority.\"\n}",
+  "json": {
+    "message": "I can't go quite that deep, but I'd be happy to put together a great volume discount for three units. Which appliance are you looking to pick up today?",
+    "rationale": "Clarifying the specific SKU the customer wants while anchoring expectations below their 25% ask and within our discount authority."
+  },
+  "recorded_at": "2026-09-02T04:18:43.703Z"
+}

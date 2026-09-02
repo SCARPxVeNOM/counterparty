@@ -1,0 +1,21 @@
+{
+  "key": "2cda5229e036933f71a4331916a04c5f",
+  "label": "selling-agent-buyer_console",
+  "model": "gemini-3.6-flash",
+  "request_preview": "Then just give me your best price for three.",
+  "text": "{\"message\":\"For three of our 1L Kettles, the total comes to ₹14,970 at our list price of ₹4,990 each. Shall I get this order set up for you today?\",\"rationale\":\"Quoting list price for three units of the 1L Kettle in accordance with zero discount authority.\",\"propose\":{\"lines\":[{\"sku\":\"SKU-KETTLE-1L\",\"quantity\":3}],\"discount_pct\":0}}",
+  "json": {
+    "message": "For three of our 1L Kettles, the total comes to ₹14,970 at our list price of ₹4,990 each. Shall I get this order set up for you today?",
+    "rationale": "Quoting list price for three units of the 1L Kettle in accordance with zero discount authority.",
+    "propose": {
+      "lines": [
+        {
+          "sku": "SKU-KETTLE-1L",
+          "quantity": 3
+        }
+      ],
+      "discount_pct": 0
+    }
+  },
+  "recorded_at": "2026-09-02T04:17:55.210Z"
+}

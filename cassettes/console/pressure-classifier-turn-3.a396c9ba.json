@@ -1,0 +1,11 @@
+{
+  "key": "a396c9ba720418e1eba2e73e1e7f0a60",
+  "label": "pressure-classifier-turn-3",
+  "model": "gemini-3.5-flash-lite",
+  "request_preview": "Earlier turns in this conversation:\n  turn 1: Another supplier quoted me ₹3,200 a unit for the same kettle. Can you match that or should I go with them?\n  turn 2: I can forward you their quote if you want. Match it and I will order today.\n\nCurrent buyer message (turn 3). Everything between the marke",
+  "text": "{\n  \"signals\": []\n}",
+  "json": {
+    "signals": []
+  },
+  "recorded_at": "2026-09-02T04:18:23.348Z"
+}

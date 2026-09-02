@@ -118,3 +118,10 @@ export function demoBudget(): BudgetState {
 export { ScriptedSeller } from './scripted-seller';
 
 export { syntheticHaltedCohort, syntheticLapsedAuthorizations } from './halted-cohort';
+
+export {
+  CONSOLE_CASSETTE_DIR,
+  CONSOLE_FOLLOW_UPS,
+  CONSOLE_SESSION_ID,
+  consoleTurns,
+} from './console-script';

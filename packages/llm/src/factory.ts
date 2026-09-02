@@ -6,10 +6,11 @@
  * anything, and the deterministic scenarios do not need a key at all.
  */
 
-import { loadConfig, type Config } from '@counterparty/config';
+import { loadConfig, MODEL_FALLBACKS, type Config } from '@counterparty/config';
 import { CassetteProvider, type CassetteMode } from './cassette';
 import { GeminiProvider } from './gemini';
 import { UnavailableProvider, type LLMProvider } from './provider';
+import { RetryingProvider, reportAttempt } from './retry';
 
 export interface ProviderChoice {
   readonly provider: LLMProvider;
@@ -27,8 +28,14 @@ export function createProvider(options: {
   const config = options.config ?? loadConfig();
   const hasKey = config.geminiApiKey !== '';
 
+  // Gemini is wrapped before the cassette ever sees it, so `503 model is busy`
+  // is handled where it happens rather than surfacing as a failed demo. Nothing
+  // wraps UnavailableProvider: a missing key is not a transient condition.
   const upstream: LLMProvider = hasKey
-    ? new GeminiProvider(config.geminiApiKey)
+    ? new RetryingProvider(new GeminiProvider(config.geminiApiKey), {
+        fallbacks: MODEL_FALLBACKS,
+        onAttempt: reportAttempt,
+      })
     : new UnavailableProvider('GEMINI_API_KEY is not set in .env');
 
   if (options.force !== undefined) {

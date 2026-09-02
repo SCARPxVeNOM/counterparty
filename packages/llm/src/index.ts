@@ -16,6 +16,15 @@ export {
   type CassetteMode,
 } from './cassette';
 
+export {
+  RetryingProvider,
+  classifyFailure,
+  reportAttempt,
+  type AttemptNote,
+  type FailureKind,
+  type RetryOptions,
+} from './retry';
+
 export { classifyPressure, toSignals, type ClassifyInput } from './classifier';
 
 export { createProvider, type ProviderChoice } from './factory';

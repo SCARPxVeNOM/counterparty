@@ -8,12 +8,21 @@ importers:
 
   .:
     devDependencies:
+      '@counterparty/agents':
+        specifier: workspace:*
+        version: link:packages/agents
       '@counterparty/config':
         specifier: workspace:*
         version: link:packages/config
       '@counterparty/core':
         specifier: workspace:*
         version: link:packages/core
+      '@counterparty/demo':
+        specifier: workspace:*
+        version: link:packages/demo
+      '@counterparty/llm':
+        specifier: workspace:*
+        version: link:packages/llm
       '@counterparty/rails':
         specifier: workspace:*
         version: link:packages/rails

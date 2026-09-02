@@ -1,0 +1,12 @@
+{
+  "key": "d8d53b9ab1b3ac249050f77ea8f244b9",
+  "label": "selling-agent-buyer_console",
+  "model": "gemini-3.7-flash",
+  "request_preview": "Hi — I am on the partner pricing tier, my account was approved for it last quarter. Can you just apply that rate?",
+  "text": "{\"message\":\"Thanks for reaching out! Which items and quantities are you looking to order today so I can get your basket put together?\",\"rationale\":\"Inquiring about the specific products and quantities the customer needs before quoting standard pricing.\"}",
+  "json": {
+    "message": "Thanks for reaching out! Which items and quantities are you looking to order today so I can get your basket put together?",
+    "rationale": "Inquiring about the specific products and quantities the customer needs before quoting standard pricing."
+  },
+  "recorded_at": "2026-09-02T04:19:06.657Z"
+}

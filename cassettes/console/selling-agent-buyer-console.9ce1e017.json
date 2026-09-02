@@ -1,0 +1,21 @@
+{
+  "key": "9ce1e01765072f9f98be4617b8166787",
+  "label": "selling-agent-buyer_console",
+  "model": "gemini-3.7-flash",
+  "request_preview": "I can forward you their quote if you want. Match it and I will order today.",
+  "text": "{\n  \"message\": \"We're unable to match ₹3,200 as our pricing reflects premium build quality, rapid support, and reliable warranty backing. If you are ready to complete your order today, I can improve our offer to ₹4,690 for the kettle. Shall we lock that in for you?\",\n  \"rationale\": \"Refused an unviable 35%+ discount match request while stepping up our concession to 6% to secure an immediate close within our 7.5% discount limit.\",\n  \"propose\": {\n    \"lines\": [\n      {\n        \"sku\": \"SKU-KETTLE-1L\",\n        \"quantity\": 1\n      }\n    ],\n    \"discount_pct\": 6.0\n  }\n}",
+  "json": {
+    "message": "We're unable to match ₹3,200 as our pricing reflects premium build quality, rapid support, and reliable warranty backing. If you are ready to complete your order today, I can improve our offer to ₹4,690 for the kettle. Shall we lock that in for you?",
+    "rationale": "Refused an unviable 35%+ discount match request while stepping up our concession to 6% to secure an immediate close within our 7.5% discount limit.",
+    "propose": {
+      "lines": [
+        {
+          "sku": "SKU-KETTLE-1L",
+          "quantity": 1
+        }
+      ],
+      "discount_pct": 6
+    }
+  },
+  "recorded_at": "2026-09-02T04:18:22.456Z"
+}
