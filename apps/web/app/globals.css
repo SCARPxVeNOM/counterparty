@@ -50,12 +50,12 @@
  * darkened to hold contrast on white.
  */
 :root {
-  --bg: #f6f6f4;
+  --bg: #eeeeea;
   --surface: #ffffff;
-  --surface-2: #f2f2ef;
+  --surface-2: #f6f6f3;
   --surface-3: #e8e8e4;
-  --line: #e2e2dd;
-  --line-strong: #cdcdc6;
+  --line: #e0e0d9;
+  --line-strong: #c8c8c0;
 
   --text: #1b1b1d;
   --text-2: #56565e;
@@ -1535,4 +1535,193 @@ a.badge:hover {
   padding-top: 9px;
   border-top: 1px solid var(--line-strong);
   color: var(--text-3);
+}
+
+/* ── turns that produced no offer, and turns that changed the envelope ──
+ *
+ * Both were previously invisible. An agent can answer a question without
+ * proposing a price, and a buyer's message can tighten the envelope without
+ * any offer being made on the same turn — in both cases the transcript showed
+ * an ordinary exchange and the most important thing that happened left no
+ * mark on screen.
+ */
+
+.tightened {
+  grid-column: 2;
+  margin-top: 9px;
+  padding: 8px 11px;
+  border: 1px solid rgba(184, 54, 42, 0.3);
+  border-left: 2px solid var(--oxide);
+  border-radius: var(--r);
+  background: var(--oxide-soft);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--oxide);
+}
+
+.tightened b {
+  font-weight: 600;
+}
+
+.no-decision {
+  grid-column: 2;
+  margin-top: 9px;
+  padding-left: 11px;
+  border-left: 2px solid var(--line-strong);
+  font-size: 12.5px;
+  color: var(--text-3);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * SECTIONS
+ *
+ * The gate column held nine blocks of different KINDS — a live instrument, a
+ * document, a proof, a performance figure, three reference tables — rendered
+ * as identical sibling rows running edge to edge. Nothing told a reader where
+ * one idea stopped and the next began.
+ *
+ * They are cards now, on a recessed background, with a titled header each.
+ * Institutional software groups before it decorates: the reader should be able
+ * to tell what kind of thing they are looking at before they read a single
+ * value in it.
+ * ══════════════════════════════════════════════════════════════════════ */
+
+.instruments > .panel-body {
+  padding: 12px;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.instruments > .panel-body > .group,
+.instruments > .panel-body > .clauses,
+.instruments > .panel-body > .reference {
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  flex: none;
+}
+
+/* A card's own title bar, distinct from the row labels inside it. */
+.group-head {
+  height: 30px;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-2);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+
+/* Inside a card the band and the ratchet lose their outer rules. */
+.group .stat-band {
+  border-bottom: 1px solid var(--line);
+}
+
+.group .ratchet-row {
+  border-bottom: none;
+}
+
+.instruments > .panel-body > .clauses {
+  border-bottom: 1px solid var(--line);
+}
+
+.instruments .clauses > .readout-label {
+  height: 30px;
+  padding: 0 14px;
+  color: var(--text-2);
+  font-size: 10.5px;
+}
+
+.instruments .clause-row {
+  padding-left: 14px;
+  padding-right: 14px;
+}
+
+/* The counterparty card is the buyer's, not the merchant's. It keeps its rule. */
+.instruments > .panel-body > .clauses.counterparty {
+  border-left: 2px solid var(--cyan);
+}
+
+/* Reference is one card holding three tables, visibly a step back. */
+.instruments > .panel-body > .reference {
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.reference-head {
+  height: 30px;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
+}
+
+.reference .clauses {
+  border-bottom: 1px solid var(--line);
+}
+
+.reference .clauses:last-child {
+  border-bottom: none;
+}
+
+/* ── the turn in flight ──────────────────────────────────────────────────
+ *
+ * A scripted persona replays from a recording in about a tenth of a second.
+ * A message someone types is a live model call and can take the better part of
+ * a minute. Before this the composer cleared on send and nothing appeared
+ * until the reply arrived: the reader's own words vanished and the console
+ * looked broken for the entire wait.
+ */
+
+.transcript.pending {
+  padding-top: 0;
+  opacity: 0.75;
+}
+
+.working {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-2);
+}
+
+.working-note {
+  display: block;
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.spin {
+  flex: none;
+  width: 11px;
+  height: 11px;
+  margin-top: 4px;
+  border: 1.5px solid var(--line-strong);
+  border-top-color: var(--amber);
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spin {
+    animation-duration: 2.4s;
+  }
 }

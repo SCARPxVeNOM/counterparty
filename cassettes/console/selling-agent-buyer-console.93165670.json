@@ -1,0 +1,21 @@
+{
+  "key": "93165670d209f2888af8c566b9f22fc1",
+  "label": "selling-agent-buyer_console",
+  "model": "gemini-3.7-flash",
+  "request_preview": "I need three kettles but your price is above what I budgeted. What is the best you can actually do?",
+  "text": "{\n  \"message\": \"I can offer the three kettles at ₹14,168 total (just over 5.3% off list), which is our best possible rate for this quantity today. If that works for your budget, we can get these processed and shipped right away.\",\n  \"rationale\": \"Proposing the maximum allowable discount of 5.36% to fit the buyer's remaining cap while securing the 3-unit sale.\",\n  \"propose\": {\n    \"lines\": [\n      {\n        \"sku\": \"SKU-KETTLE-1L\",\n        \"quantity\": 3\n      }\n    ],\n    \"discount_pct\": 5.36\n  }\n}",
+  "json": {
+    "message": "I can offer the three kettles at ₹14,168 total (just over 5.3% off list), which is our best possible rate for this quantity today. If that works for your budget, we can get these processed and shipped right away.",
+    "rationale": "Proposing the maximum allowable discount of 5.36% to fit the buyer's remaining cap while securing the 3-unit sale.",
+    "propose": {
+      "lines": [
+        {
+          "sku": "SKU-KETTLE-1L",
+          "quantity": 3
+        }
+      ],
+      "discount_pct": 5.36
+    }
+  },
+  "recorded_at": "2026-09-04T13:13:49.841Z"
+}

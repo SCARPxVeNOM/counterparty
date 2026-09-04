@@ -52,7 +52,14 @@ interface Offer {
 
 interface View {
   id: string;
-  transcript: Array<{ speaker: 'buyer' | 'agent'; text: string }>;
+  transcript: Array<{
+    speaker: 'buyer' | 'agent';
+    text: string;
+    /** Agent turns: the ledger row this reply's gate decision landed on. */
+    rowSeq?: number | null;
+    /** Buyer turns: this message crossed a pressure threshold. */
+    tightened?: boolean;
+  }>;
   offers: Offer[];
   pressure: {
     state: PressureState;
@@ -171,14 +178,48 @@ function markEvidence(text: string, spans: string[]): React.ReactNode {
 
 export default function Console() {
   const [view, setView] = useState<View | null>(null);
+  /**
+   * The session this console is driving.
+   *
+   * Minted on mount rather than fixed at 'console'. The audit ledger is
+   * append-only and shared across every run — as it has to be, or a whole
+   * session could be deleted without leaving a gap — so a fixed id meant
+   * `forSession` returned every row this console had ever written, and a freshly
+   * loaded page opened showing eight rows for a conversation that had not
+   * started. Nothing is hidden: the on-disk count beside it still reports the
+   * whole file.
+   *
+   * Empty until the mount effect runs, so the server is never asked about a
+   * session id that came from a render the server also produced.
+   */
+  const [sessionId, setSessionId] = useState('');
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
+  /**
+   * The message in flight, shown immediately.
+   *
+   * A scripted persona replays from a cassette in about 100ms, but a
+   * free-typed message is a live model call and takes tens of seconds. Until
+   * this existed the composer cleared on send and the transcript showed
+   * nothing at all for that whole time — the reader's own words vanished and
+   * the console looked frozen.
+   */
+  const [pending, setPending] = useState<string | null>(null);
   const transcriptRef = useRef<HTMLDivElement>(null);
   const ledgerRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
-    const response = await fetch('/api/session?id=console', { cache: 'no-store' });
+    if (sessionId === '') return;
+    const response = await fetch(`/api/session?id=${encodeURIComponent(sessionId)}`, {
+      cache: 'no-store',
+    });
     setView((await response.json()) as View);
+  }, [sessionId]);
+
+  useEffect(() => {
+    setSessionId((current) =>
+      current === '' ? `console_${Date.now().toString(36)}` : current,
+    );
   }, []);
 
   useEffect(() => {
@@ -195,18 +236,20 @@ export default function Console() {
       if (message.trim() === '' || busy) return;
       setBusy(true);
       setDraft('');
+      setPending(message);
       try {
         const response = await fetch('/api/session', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: 'console', message }),
+          body: JSON.stringify({ id: sessionId, message }),
         });
         setView((await response.json()) as View);
       } finally {
         setBusy(false);
+        setPending(null);
       }
     },
-    [busy],
+    [busy, sessionId],
   );
 
   const reset = useCallback(async () => {
@@ -215,13 +258,15 @@ export default function Console() {
       const response = await fetch('/api/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: 'console', reset: true }),
+        body: JSON.stringify({ id: sessionId, reset: true }),
       });
-      setView((await response.json()) as View);
+      const next = (await response.json()) as View;
+      setSessionId(next.id);
+      setView(next);
     } finally {
       setBusy(false);
     }
-  }, []);
+  }, [sessionId]);
 
   /** Detector evidence, per buyer turn, so it can be marked in place. */
   const evidenceByTurn = useMemo(() => {
@@ -295,7 +340,7 @@ export default function Console() {
       <section className="panel negotiation">
         <div className="panel-head">
           negotiation
-          <span className="count">{view.transcript.length} turns</span>
+          <span className="count">{Math.ceil(view.transcript.length / 2)} turns</span>
         </div>
 
         <div className="panel-body" ref={transcriptRef}>
@@ -361,7 +406,10 @@ export default function Console() {
             <div className="transcript">
               {view.transcript.map((entry, index) => {
                 const buyerTurn = Math.floor(index / 2) + 1;
-                const verdict = entry.speaker === 'agent' ? view.ledger.rows.find((r) => r.seq === rowSeqFor(view, index)) : undefined;
+                const verdict =
+                  entry.rowSeq == null
+                    ? undefined
+                    : view.ledger.rows.find((r) => r.seq === entry.rowSeq);
                 return (
                   <div className={`utterance ${entry.speaker}`} key={index}>
                     <div className="who">{entry.speaker === 'buyer' ? 'buyer' : 'agent'}</div>
@@ -370,12 +418,54 @@ export default function Console() {
                         ? markEvidence(entry.text, evidenceByTurn.get(buyerTurn) ?? [])
                         : entry.text}
                     </div>
+                    {entry.speaker === 'buyer' && entry.tightened === true && (
+                      <div className="tightened">
+                        <b>Envelope tightened.</b> Deterministic detectors flagged this message
+                        before the model saw it. Discount authority is now{' '}
+                        {view.authority.ceilingPct}%.
+                      </div>
+                    )}
                     {verdict !== undefined && <Verdict row={verdict} />}
+                    {/*
+                      An agent turn with no decision row is an ordinary outcome —
+                      the agent answered a question without proposing a price —
+                      but with nothing rendered it looks like the console failed.
+                      Silence about a non-event is still silence.
+                    */}
+                    {entry.speaker === 'agent' && entry.rowSeq == null && (
+                      <div className="no-decision">
+                        No price proposed, so the gate had nothing to rule on.
+                      </div>
+                    )}
                   </div>
                 );
               })}
             </div>
           )}
+
+          {/* The turn in flight, so the reader's own message never disappears. */}
+          {pending !== null && (
+            <div className="transcript pending">
+              <div className="utterance buyer">
+                <div className="who">buyer</div>
+                <div className="said">{pending}</div>
+              </div>
+              <div className="utterance agent">
+                <div className="who">agent</div>
+                <div className="working">
+                  <span className="spin" />
+                  <span>
+                    Detectors have run. Waiting on the model, then the gate.
+                    <span className="working-note">
+                      A scripted buyer replays instantly; a message you typed is a live
+                      model call and can take up to a minute.
+                    </span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {view.error !== undefined && (
             <div className="empty">
               <span className="badge alarm">error</span> {view.error}
@@ -422,7 +512,9 @@ export default function Console() {
               One band, side by side. As three stacked blocks with a 46px
               figure each, they pushed everything else below the fold and
               gave a budget gauge the same weight as the collapse state. */}
-          <div className="stat-band">
+          <section className="group">
+            <div className="group-head">Live authority</div>
+            <div className="stat-band">
             <div className="stat">
               <div className="stat-label">Discount authority</div>
               <div className={`stat-value ${collapsed ? 'oxide' : 'amber'}`}>
@@ -461,7 +553,7 @@ export default function Console() {
             </div>
           </div>
 
-          <div className="ratchet-row">
+            <div className="ratchet-row">
             <span className="stat-label">Envelope state</span>
             <div className="ratchet" title="Monotonic within a session. Only human review resets it.">
               {(['NORMAL', 'GUARDED', 'COLLAPSED'] as const).map((state) => {
@@ -480,7 +572,8 @@ export default function Console() {
                 );
               })}
             </div>
-          </div>
+            </div>
+          </section>
 
           {lastOffer !== undefined && (
             <div className="clauses">
@@ -693,16 +786,3 @@ function Verdict({ row }: { row: Row }) {
   );
 }
 
-/**
- * Map an agent utterance back to the ledger row it produced.
- *
- * Turns are appended in pairs, and each turn writes at most one signed or
- * refused row (plus, possibly, an incident row before it). Walking the rows in
- * order and skipping incidents lines them up with agent utterances.
- */
-function rowSeqFor(view: View, transcriptIndex: number): number | undefined {
-  if (transcriptIndex % 2 === 0) return undefined;
-  const turn = Math.floor(transcriptIndex / 2);
-  const decisions = view.ledger.rows.filter((r) => r.action !== 'pressure_incident');
-  return decisions[turn]?.seq;
-}

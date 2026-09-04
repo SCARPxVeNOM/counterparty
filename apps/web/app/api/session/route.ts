@@ -167,7 +167,25 @@ function view(session: Session, id: string) {
 
   return {
     id,
-    transcript: session.transcript,
+    /**
+     * Each agent reply carries the audit row its gate decision landed on.
+     *
+     * The console used to derive this by counting decision rows and assuming
+     * the nth one belonged to the nth agent utterance. That assumption fails
+     * three ways — an incident row written before a decision, a refusal that
+     * retries and writes twice, and a ledger already holding rows from an
+     * earlier session under the same id — and the last one put the wrong
+     * clause under every reply after a reset.
+     */
+    transcript: session.transcript.map((entry, index) => {
+      const turn = Math.floor(index / 2);
+      if (entry.speaker === 'buyer') {
+        // Marked on the buyer's own message, because that message is what
+        // tightened the envelope.
+        return { ...entry, tightened: session.incidentAtTurn.includes(turn + 1) };
+      }
+      return { ...entry, rowSeq: session.decisionRowSeqs[turn] ?? null };
+    }),
     offers: session.signedOffers.map((offer) => {
       /**
        * The buyer's check, run on the buyer's inputs.
@@ -300,9 +318,24 @@ export async function POST(request: Request) {
   const body = (await request.json()) as { id?: string; message?: string; reset?: boolean };
   const id = body.id ?? 'console';
 
+  /**
+   * A reset starts a new negotiation, so it gets a new session id.
+   *
+   * Reusing the id looked tidier and was wrong twice over. The ledger is
+   * append-only — as it must be — so `forSession('console')` kept returning
+   * every row this console had ever written, and after a reset the panel
+   * showed eight rows for a conversation that had not started yet. It also put
+   * the *previous* run's clause under the new run's first reply, because the
+   * old row was still the one the count landed on.
+   *
+   * Nothing is deleted. The rows stay on disk and stay in the chain; only the
+   * question the panel asks changes, from "everything ever done under this
+   * name" to "this negotiation".
+   */
   if (body.reset === true) {
     sessions.delete(id);
-    return NextResponse.json(view(sessionFor(id), id));
+    const fresh = `console_${Date.now().toString(36)}`;
+    return NextResponse.json(view(sessionFor(fresh), fresh));
   }
 
   const message = (body.message ?? '').trim();

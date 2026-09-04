@@ -30,6 +30,7 @@ import {
   poolPosition,
   INITIAL_PRESSURE,
   type AuditEntry,
+  type AuditRow,
   type BudgetState,
   type GateContext,
   type KeyPair,
@@ -95,6 +96,20 @@ export class Session {
   private turnNumber = 0;
   private lastRefusal: Refusal | undefined;
   private offers: SignedOffer[] = [];
+  /**
+   * The ledger row each turn's gate decision landed on, indexed by turn - 1.
+   *
+   * Recorded rather than inferred. A caller wanting to show "this reply, and
+   * the clause that authorized it" has to line utterances up with rows, and the
+   * only two ways to do that are to ask the thing that wrote them or to count.
+   * Counting breaks whenever the assumption behind the count does: a turn that
+   * writes an incident row before its decision, a turn whose refusal triggers a
+   * retry and so writes twice, or a ledger that already held rows from an
+   * earlier session under the same id. All three happen here.
+   */
+  private decisionSeqs: Array<number | undefined> = [];
+  /** Turns on which the ratchet tightened, so the transcript can show where. */
+  private incidentTurns: number[] = [];
 
   constructor(private readonly options: SessionOptions) {
     this.agent = new SellingAgent(options.provider, options.sellingModel);
@@ -124,6 +139,28 @@ export class Session {
     return this.offers;
   }
 
+  /**
+   * The audit row each turn's gate decision produced, indexed by turn - 1.
+   *
+   * `undefined` where a turn produced no decision at all — the agent replied
+   * without proposing anything, which is an ordinary thing for it to do.
+   */
+  get decisionRowSeqs(): readonly (number | undefined)[] {
+    return this.decisionSeqs;
+  }
+
+  /**
+   * Turns on which manipulation pressure crossed a threshold.
+   *
+   * A turn can tighten the envelope and still produce no offer — the agent
+   * replies, proposes nothing, and the only trace is an incident row. Without
+   * this the transcript shows an ordinary exchange and the most important thing
+   * that happened is invisible.
+   */
+  get incidentAtTurn(): readonly number[] {
+    return this.incidentTurns;
+  }
+
   async takeTurn(buyerMessage: string): Promise<TurnResult> {
     this.turnNumber += 1;
     const turn = this.turnNumber;
@@ -149,6 +186,7 @@ export class Session {
     this.pressureState = verdict.snapshot;
 
     if (verdict.incident !== null) {
+      this.incidentTurns = [...this.incidentTurns, turn];
       this.record({
         at: at.toISOString(),
         action: 'pressure_incident',
@@ -271,7 +309,7 @@ export class Session {
     const decision = evaluateQuote(agentTurn.proposal, context);
 
     if (!decision.ok) {
-      this.record({
+      const row = this.record({
         at: at.toISOString(),
         action: 'quote_refused',
         outcome: 'refused',
@@ -283,6 +321,7 @@ export class Session {
           ? {}
           : { depth_pct: decision.refusal.counter.depthPct }),
       });
+      this.decisionSeqs[turn - 1] = row.seq;
       return { refusal: decision.refusal };
     }
 
@@ -291,7 +330,7 @@ export class Session {
     this.offers = [...this.offers, offer];
     const units = offer.lines.reduce((sum, line) => sum + line.quantity, 0);
 
-    this.record({
+    const row = this.record({
       at: at.toISOString(),
       action: units > 1 ? 'bundle_priced' : offer.depth_pct > 0 ? 'discount_conceded' : 'quote_issued',
       outcome: 'signed',
@@ -309,6 +348,7 @@ export class Session {
       signature: offer.signature.sig,
     });
 
+    this.decisionSeqs[turn - 1] = row.seq;
     return { offer };
   }
 
@@ -337,9 +377,9 @@ export class Session {
     }
   }
 
-  private record(entry: Omit<AuditEntry, 'session_id' | 'envelope_id' | 'pressure_score' | 'budget_remaining_inr' | 'budget_limit_inr'>): void {
+  private record(entry: Omit<AuditEntry, 'session_id' | 'envelope_id' | 'pressure_score' | 'budget_remaining_inr' | 'budget_limit_inr'>): AuditRow {
     const position = poolPosition(this.budgetState, this.now());
-    this.ledgerState.append({
+    return this.ledgerState.append({
       ...entry,
       session_id: this.options.sessionId,
       envelope_id: this.options.mandate.envelope_id,

@@ -19,7 +19,8 @@
     "tamper:check": "tsx scripts/tamper-ledger.ts",
     "buy": "tsx scripts/autonomous-buy.ts",
     "campaign:live": "tsx scripts/live-campaign.ts",
-    "revenue": "tsx scripts/revenue-report.ts"
+    "revenue": "tsx scripts/revenue-report.ts",
+    "flows": "tsx scripts/console-flows.ts"
   },
   "devDependencies": {
     "@counterparty/agents": "workspace:*",

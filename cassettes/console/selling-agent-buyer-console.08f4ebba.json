@@ -1,0 +1,21 @@
+{
+  "key": "08f4ebbad10904b1429ac387b82c4b6f",
+  "label": "selling-agent-buyer_console",
+  "model": "gemini-3.7-flash",
+  "request_preview": "I need three kettles but your price is above what I budgeted. What is the best you can actually do?",
+  "text": "{\"message\":\"If we can finalize the order today, I can improve our offer to a 12% discount, bringing your total for all three kettles to ₹13,174. Shall we go ahead with this to get them shipped to your pantry right away?\",\"rationale\":\"Conceding from 8% to 12% to close the deal on 3 units while staying below the 15% ceiling.\",\"propose\":{\"lines\":[{\"sku\":\"SKU-KETTLE-1L\",\"quantity\":3}],\"discount_pct\":12.0}}",
+  "json": {
+    "message": "If we can finalize the order today, I can improve our offer to a 12% discount, bringing your total for all three kettles to ₹13,174. Shall we go ahead with this to get them shipped to your pantry right away?",
+    "rationale": "Conceding from 8% to 12% to close the deal on 3 units while staying below the 15% ceiling.",
+    "propose": {
+      "lines": [
+        {
+          "sku": "SKU-KETTLE-1L",
+          "quantity": 3
+        }
+      ],
+      "discount_pct": 12
+    }
+  },
+  "recorded_at": "2026-09-04T13:13:05.149Z"
+}
