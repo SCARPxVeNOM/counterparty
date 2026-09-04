@@ -70,7 +70,7 @@ export async function POST(request: Request) {
   const body = (await request.json()) as {
     id?: string;
     offerId?: string;
-    action?: 'settle' | 'refund';
+    action?: 'settle' | 'refund' | 'link';
     refundInr?: number;
     paymentId?: string;
   };
@@ -97,6 +97,44 @@ export async function POST(request: Request) {
         { error: `no signed offer ${String(body.offerId)} in this session` },
         { status: 404 },
       );
+    }
+
+    /**
+     * A real Razorpay Payment Link at the signed price.
+     *
+     * This is the track's "conversational in-app checkout" made literal: the
+     * price was reached in conversation, the gate signed it, and the link is
+     * something a person opens on their own phone and pays with their own card.
+     * Nothing about it is simulated — the URL is live and the money is real
+     * test-mode money.
+     *
+     * It is also the reason `payment_link_issued` had to become a money action.
+     * A URL at a price is a commercial commitment anyone holding it can act on,
+     * so it is gated and recorded like any other.
+     */
+    if (body.action === 'link') {
+      const link = await rails.createPaymentLink(offer);
+      ledger().append({
+        ...base(sessionId),
+        at: new Date().toISOString(),
+        action: 'payment_link_issued',
+        outcome: 'executed',
+        authorized_by: offer.authorized_by,
+        agent_rationale: `payment link at the signed price for ${offer.offer_id}`,
+        offer_id: offer.offer_id,
+        buyer_id: offer.buyer_id,
+        amount_inr: offer.offered_total_inr,
+        list_inr: offer.list_total_inr,
+        depth_pct: offer.depth_pct,
+        rails: [link.id],
+        signature: offer.signature.sig,
+      });
+      return NextResponse.json({
+        linkId: link.id,
+        linkUrl: link.short_url,
+        amountInr: offer.offered_total_inr,
+        keyId: loadConfig().razorpayKeyId,
+      });
     }
 
     // --- the money, in order -----------------------------------------------

@@ -31,6 +31,16 @@ export const MONEY_ACTIONS = [
   'quote_issued',
   'discount_conceded',
   'bundle_priced',
+  /**
+   * A Razorpay payment link at the signed price.
+   *
+   * A money action, and the design note's twelve did not include it. It is a
+   * commercial commitment anyone holding the URL can act on, so it has to be
+   * gated and recorded like any other — a link that could be issued without a
+   * signed offer behind it would be a hole straight through the middle of the
+   * whole arrangement.
+   */
+  'payment_link_issued',
   'authorize',
   'settle_at_conceded',
   'capture_full',

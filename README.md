@@ -91,6 +91,7 @@ pnpm buy --rogue --resign            # ...offered a validly signed 60% discount
 
 pnpm revenue                         # what the envelope earned, over 18 recorded turns
 pnpm campaign:live                   # win-back against the account's real abandoned orders
+pnpm campaign:live --issue --limit=2 # ...and issue them as real Razorpay Payment Links
 ```
 
 `pnpm demo` needs no API key, no network and no working Razorpay account. It
@@ -398,6 +399,24 @@ itself carries the chain:
 Open that order in the Razorpay Dashboard and the clause that authorized the
 price is on the object. The audit trail is not only in this repo.
 
+Two ways to take the money, both from the same panel. **Charge** creates the
+order and captures it with a simulated card tap. **Send a real payment link**
+calls `POST /payment_links` and hands back a live URL — which is the track's
+"conversational in-app checkout" made literal: the price was reached in
+conversation, the gate signed it, and a person opens the link on their own phone
+and pays with their own card. Nothing about that is simulated.
+
+The campaign does the same thing outward. `pnpm campaign:live --issue` turns each
+signed win-back offer into a real Payment Link for a real abandoned order:
+
+```
+plink_TY8IWRf4dIobWe  https://rzp.io/rzp/NnGWd1l  ₹4,391.20
+         for order_TY87q17mUQfIXb
+```
+
+Until that flag existed the campaign signed offers and issued nothing — the
+authority was real and the reach was imaginary.
+
 `/api/pay` sends an **offer id, never an amount**. The route looks it up among
 the offers the gate signed in this session, and `rails.createOrder` takes a
 `SignedOffer` and re-verifies the gate signature before calling Razorpay — so a
@@ -692,7 +711,8 @@ to claim and worth being precise about.
 | 1 | Signed quote issuance | n/a — signing is local, and verifiable offline |
 | 2 | Discount concession | n/a — same |
 | 3 | Bundle / cross-sell price | n/a — same |
-| 4 | Authorize | ✅ **a human card at Checkout** — `pay_TUQ7MKc8zXf1gE` |
+| 3½ | **Payment link at the signed price** | ✅ from the console — `plink_TY8LWAkWMez1HJ`, a live URL anyone can open and pay. §8 listed twelve; this is the thirteenth, and a URL at a price is a commitment, so it is gated and audited like the rest |
+| 4 | Authorize | ✅ **a human card at Checkout** — `pay_TUQ7MKc8zXf1gE`, and from the console with a simulated tap |
 | 5 | ~~Partial capture~~ → settle at conceded amount | replaced — the primitive does not exist ([C1](docs/CORRECTIONS.md)) |
 | 6 | Full capture | ✅ against that real authorized payment |
 | 7 | Deliberate lapse | **no API call exists to make.** The action is the *absence* of a capture; the record exists so the trail shows a decision rather than an oversight |
@@ -731,7 +751,7 @@ refund and being allowed to make one are different things.
 | Build an agent | `packages/agents` — reasoning under adversarial pressure |
 | Grows merchant revenue on test-mode APIs | bundles, conceded-but-profitable closes, campaigns on a shared budget — and **+₹1,946 (+4.03%) against a flat cap**, computed from the ledger by `pnpm cli audit --revenue` |
 | Merchant transactable by an AI buyer end to end | **`pnpm buy` — an AI buyer discovers the catalog, negotiates, verifies and pays with nobody typing**; and separately, a real human card through Checkout |
-| Conversational in-app checkout | the negotiation *is* the checkout |
+| Conversational in-app checkout | the negotiation *is* the checkout — a signed offer becomes a **real Razorpay Payment Link** from the console, and the same panel charges it outright |
 | Agent-readable catalog | ACP/UCP shape + AOCF terms + `upi-uap`, built by `/onboard` from a real Razorpay page |
 | Upsell & cross-sell | bundle authority in the envelope |
 | Campaign orchestrator | `runCampaign` calls the same `evaluateQuote` a negotiation calls, threading the same budget — aimed at the account's **real** abandoned checkouts via `pnpm campaign:live` |

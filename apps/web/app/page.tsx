@@ -62,6 +62,8 @@ interface MoneyResult {
   simulatedCard?: boolean;
   rails?: string[];
   keyId?: string;
+  linkId?: string;
+  linkUrl?: string;
   error?: string;
 }
 
@@ -279,13 +281,13 @@ export default function Console() {
    * has no path to a charge.
    */
   const takePayment = useCallback(
-    async (offerId: string) => {
+    async (offerId: string, action?: 'link') => {
       setPaying(true);
       try {
         const response = await fetch('/api/pay', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: sessionId, offerId }),
+          body: JSON.stringify({ id: sessionId, offerId, ...(action === undefined ? {} : { action }) }),
         });
         setMoney((await response.json()) as MoneyResult);
         await load();
@@ -624,7 +626,20 @@ export default function Console() {
                 </span>
               </div>
 
-              {money_?.orderId === undefined ? (
+              {money_?.linkUrl !== undefined ? (
+                <div className="money-cta">
+                  <p>
+                    Live Razorpay link at <b>{money(money_.amountInr ?? 0)}</b> — the price the
+                    gate signed. Open it and pay with a test card.
+                  </p>
+                  <a className="primary link" href={money_.linkUrl} target="_blank" rel="noreferrer">
+                    Open payment link →
+                  </a>
+                  <span className="money-note">
+                    {money_.linkId} · real object in {money_.keyId ?? 'test mode'}
+                  </span>
+                </div>
+              ) : money_?.orderId === undefined ? (
                 <div className="money-cta">
                   <p>
                     The gate signed {money(lastOffer.offered_total_inr)}. Taking it to the rails
@@ -637,9 +652,24 @@ export default function Console() {
                   >
                     {paying ? 'Calling Razorpay…' : `Charge ${money(lastOffer.offered_total_inr)}`}
                   </button>
+                  {/*
+                    The track's "conversational in-app checkout", made literal:
+                    the price was reached in conversation, the gate signed it,
+                    and this is a live URL a person opens on their own phone and
+                    pays with their own card. Nothing about it is simulated.
+                  */}
+                  <button
+                    className="persona wide"
+                    disabled={paying}
+                    onClick={() => void takePayment(lastOffer.offer_id, 'link')}
+                  >
+                    Or send a real payment link
+                  </button>
                   <span className="money-note">
-                    The card tap is simulated — authorising a payment is a human pressing a
-                    button on their own device. Everything else is a real API call.
+                    <b>Charge</b> creates a real order and captures it with a simulated card
+                    tap — authorising a payment is a human pressing a button on their own
+                    device. <b>The link</b> is the other half: a live Razorpay URL anyone can
+                    open and pay with a real test card.
                   </span>
                 </div>
               ) : (

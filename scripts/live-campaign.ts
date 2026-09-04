@@ -25,11 +25,28 @@
 
 import { formatInr, rupeesToPaise, verifyChain } from '@counterparty/core';
 import { runCampaign, type Segment } from '@counterparty/agents';
-import { RazorpayClient, lapsedAuthorizationCohort, haltedSubscriptionCohort } from '@counterparty/rails';
+import {
+  Rails,
+  RazorpayClient,
+  SimAuthorizer,
+  haltedSubscriptionCohort,
+  lapsedAuthorizationCohort,
+} from '@counterparty/rails';
 import { loadConfig } from '@counterparty/config';
 import { CATALOG, demoBudget, demoMandate, gateKey } from '@counterparty/demo';
 
 const DEPTH = Number(process.argv.find((a) => a.startsWith('--depth='))?.split('=')[1] ?? 12);
+
+/**
+ * Actually issue the offers as Razorpay Payment Links.
+ *
+ * Off by default, because it makes one real API call per member against the
+ * merchant's live test account. §7 says a campaign "generates payment links for
+ * the segment", and until this existed the campaign signed offers and issued
+ * nothing — the authority was real and the reach was imaginary.
+ */
+const ISSUE = process.argv.includes('--issue');
+const ISSUE_LIMIT = Number(process.argv.find((a) => a.startsWith('--limit='))?.split('=')[1] ?? 3);
 
 async function main(): Promise<void> {
   const config = loadConfig();
@@ -112,6 +129,30 @@ async function main(): Promise<void> {
 
   const limitInr = demoMandate().authority.discount_budget_inr_per_day;
   const remaining = limitInr - result.committedInr;
+
+  // --- issue the links ------------------------------------------------------
+  if (ISSUE) {
+    const rails = new Rails({ client, authorizer: new SimAuthorizer(), mandate: demoMandate() });
+    const signed = result.outcomes.filter((o) => o.offer !== undefined).slice(0, ISSUE_LIMIT);
+
+    console.log(`\n  Issuing ${signed.length} of ${result.reached} as real Razorpay Payment Links`);
+    console.log('  (capped by --limit; each one is a live API call)\n');
+
+    for (const outcome of signed) {
+      if (outcome.offer === undefined) continue;
+      try {
+        const link = await rails.createPaymentLink(outcome.offer);
+        console.log(
+          `  ${link.id}  ${link.short_url}  ${formatInr(rupeesToPaise(outcome.offer.offered_total_inr))}`,
+        );
+        console.log(`           for ${outcome.member.buyerId}`);
+      } catch (error) {
+        console.log(`  FAILED  ${outcome.member.buyerId}: ${(error as Error).message}`);
+      }
+    }
+  } else {
+    console.log('\n  No links issued. Pass --issue to send them for real (--limit caps how many).');
+  }
 
   console.log(`\n  reached ${result.reached}, refused ${result.refused}`);
   console.log(

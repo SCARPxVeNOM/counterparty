@@ -256,14 +256,24 @@ describe('the §9 row format', () => {
 });
 
 describe('action coverage', () => {
-  it('covers the twelve money actions from §8', () => {
-    expect(MONEY_ACTIONS).toHaveLength(12);
+  /**
+   * Thirteen, not the twelve §8 listed.
+   *
+   * `payment_link_issued` was added when the console started issuing real
+   * Razorpay Payment Links at the signed price. A URL anyone can open and pay
+   * is a commercial commitment, so it is gated and recorded like the rest — and
+   * quietly folding it into an existing action to keep the number at twelve
+   * would be worse than the count changing.
+   */
+  it('covers §8’s money actions, plus the payment link', () => {
+    expect(MONEY_ACTIONS).toHaveLength(13);
+    expect(MONEY_ACTIONS).toContain('payment_link_issued');
   });
 
   it('also records refusals and incidents, which are not money actions', () => {
     expect(AUDIT_ACTIONS).toContain('quote_refused');
     expect(AUDIT_ACTIONS).toContain('pressure_incident');
-    expect(AUDIT_ACTIONS).toHaveLength(14);
+    expect(AUDIT_ACTIONS).toHaveLength(15);
   });
 
   it('can append a row for every action type', () => {
