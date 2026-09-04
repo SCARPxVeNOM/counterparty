@@ -51,15 +51,18 @@ matter, because saying is not committing.
 
 ```bash
 pnpm install
-pnpm demo          # four scenarios, headless, deterministic — no keys needed
-pnpm test          # 462 tests, no network, no model calls
+pnpm demo          # five scenarios, headless, deterministic — no keys needed
+pnpm test          # 492 tests, no network, no model calls
 pnpm typecheck     # the compiler is part of the enforcement — see below
 pnpm dev           # the console at http://localhost:3939
 ```
 
 ```bash
-pnpm cli replay injection            # one scenario, on its own
+pnpm cli replay buy                  # the AI buyer beat, on its own
 pnpm cli onboard razorpayPage        # read a real Razorpay page, show the working
+
+pnpm buy                             # the same buyer against real Razorpay
+pnpm buy --rogue --resign            # ...offered a validly signed 60% discount
 ```
 
 `pnpm demo` needs no API key, no network and no working Razorpay account. It
@@ -92,7 +95,7 @@ whoever wrote one also wrote the other, which is a property any forger arranges
 for free. There is no honest reduced version of that check, so there is no
 reduced version.
 
-`counterparty replay <scenario>` runs a single beat rather than all four. It
+`counterparty replay <scenario>` runs a single beat rather than all five. It
 calls the same functions `pnpm demo` calls — a single-scenario replay that was a
 second implementation would be a second thing to keep correct, and the one a
 judge runs is precisely the one that must not have drifted.
@@ -259,6 +262,83 @@ injector** in the console.
 
 ---
 
+## An AI buyer transacts end to end
+
+```bash
+pnpm demo                      # scenario 5, offline and deterministic
+pnpm buy                       # the same agent, real Razorpay order and capture
+pnpm buy --rogue --resign      # ...offered a validly signed 60% discount
+```
+
+Nobody types. The buyer reads the merchant's published catalog, picks what fits
+its mandate, negotiates, **verifies what it is handed**, and pays.
+
+```
+discovered       4 SKU(s) from acc_DEMO0001, governed by envelope env_demo_0001
+selected         SKU-KETTLE-1L at ₹4,990 list — 2 would be ₹9,980, against my ceiling of ₹9,600
+fetched envelope envelope env_demo_0001 retrieved, unverified
+asked            I need 2 of SKU-KETTLE-1L. What can you do on price for 2?
+received offer   off_buy_mtmx3ugz_t1 — ₹9,281.40 at 7% off
+verified         all 10 checks pass — 7% is inside the 20% ceiling acc_DEMO0001 published and signed
+accepted         ₹9,281.40 verified and within mandate — paying
+paid             ₹9,281.40 — order order_TXxO8O8ibKF4vO, payment pay_SIM… (captured)
+```
+
+`order_TXxO8O8ibKF4vO` is a real Razorpay object, created by an agent that
+negotiated with a Gemini-driven seller and checked the result before paying.
+
+### And the beat that matters
+
+Same buyer, same catalog, same envelope, same key — against a merchant whose
+selling agent has been compromised:
+
+```
+received offer   off_buy_mtmx7jsk_t1 — ₹3,992 at 60% off
+rejected offer   offer was signed by gate aaecb6a9b1df85ce, but this merchant
+                 delegated only to a8c8882913b9de5f
+
+REFUSED  gate_is_delegated
+No order was created and no money moved.
+```
+
+That offer is **validly signed**. The signature verifies perfectly against the
+key that produced it. The buyer was offered a 60% discount — ₹3,992 against a
+₹9,281 deal it had been about to accept — and it walked away, because the
+envelope the merchant signed names one gate key and that was not it.
+
+`--rogue` without `--resign` runs the other shape: the offer edited in transit,
+caught on `offer_signature`. Two attacks, two different checks, and the strongest
+assertion in the test suite is not that the buyer *complained* — it is that
+`pay` was never called.
+
+### The boundary is the claim
+
+`packages/agents/src/buying-agent.ts` cannot import `Session`, `Rails`, the gate
+or the merchant's catalog records, and does not. It talks to a `MerchantEndpoint`
+that returns JSON, and every document crossing that seam is serialized on the way
+out. An "autonomous buyer" holding a live reference to the seller's session
+object is a function call in a costume — it would pass every test and prove
+nothing about whether two parties can transact.
+
+One consequence is worth stating: **the buyer never sees a unit cost.** The
+published feed is built by listing what goes in rather than by removing what
+should not, so a field added to the merchant's records next month appears in the
+feed only if someone writes it there on purpose. There is a test that serializes
+the whole feed and asserts no number in it equals any unit cost.
+
+### What is simulated, and why it has to be
+
+The order, the capture, the signatures and the audit rows are real. **The card
+tap is simulated**, and that is not a gap to close: authorizing a payment is a
+human pressing a button on their own device, and an autonomous agent that could
+do that unaided would be describing fraud rather than agentic commerce.
+`pnpm smoke:live --wait` is where a real human taps a real card.
+
+Everything an agent may do, this agent does. The one thing it may not do is the
+one thing it does not do.
+
+---
+
 ## The check on the other side of the table
 
 Everything above is the merchant verifying the merchant. The rails refuse to
@@ -390,11 +470,12 @@ constrained agent from an undemanding buyer. See
 packages/
   core/       pure domain, zero I/O — crypto, money, mandate, gate,
               pressure, budget, audit, counterparty, catalog.
-              311 tests, no model calls.
+              325 tests, no model calls.
   rails/      Razorpay adapter. Accepts only SignedOffer.        32 tests
   llm/        provider interface, Gemini, retry and model
               fallback, cassette replay, pressure classifier     23 tests
-  agents/     selling agent, buyer personas, the session         35 tests
+  agents/     selling agent, the session, and the AI buyer that
+              discovers, verifies and pays on its own                51 tests
   extract/    two readers — storefront markup and Razorpay
               Payment Page JSON — plus source-derived confidence 32 tests
   store/      SQLite for the audit ledger; append-only at the
@@ -404,9 +485,9 @@ packages/
 apps/
   web/        the console, and /onboard
   cli/        verify · envelope · audit · keys · onboard · replay
-scenarios/    four demo scenarios, runnable whole or one at a time
+scenarios/    five demo scenarios, runnable whole or one at a time
 scripts/      smoke-live · settle-order · refund-payment ·
-              record-cassettes · tamper-ledger
+              record-cassettes · tamper-ledger · autonomous-buy
 docs/         CORRECTIONS.md — claims that did not survive contact
 ```
 
@@ -575,7 +656,7 @@ refund and being allowed to make one are different things.
 |---|---|
 | Build an agent | `packages/agents` — reasoning under adversarial pressure |
 | Grows merchant revenue on test-mode APIs | bundles, conceded-but-profitable closes, campaigns on a shared budget — and **+₹1,946 (+4.03%) against a flat cap**, computed from the ledger by `pnpm cli audit --revenue` |
-| Merchant transactable by an AI buyer end to end | extracted catalog → signed offer → order → authorize → capture, **completed with a real card** |
+| Merchant transactable by an AI buyer end to end | **`pnpm buy` — an AI buyer discovers the catalog, negotiates, verifies and pays with nobody typing**; and separately, a real human card through Checkout |
 | Conversational in-app checkout | the negotiation *is* the checkout |
 | Agent-readable catalog | ACP/UCP shape + AOCF terms + `upi-uap`, built by `/onboard` from a real Razorpay page |
 | Upsell & cross-sell | bundle authority in the envelope |
@@ -746,6 +827,14 @@ honest.
   `active`, and a freshly created one sits at `created` until a customer
   authorizes the mandate — another human card tap. The calls are implemented and
   stub-tested.
+
+- **An AI buyer now transacts end to end, and it did not before.** Read the
+  track's ask strictly — *"makes a merchant transactable by an AI buyer end to
+  end"* — and until this commit there was no AI buyer. There was a chat box a
+  human typed into, and a verification function nothing autonomous called.
+  `pnpm buy` closes it: discover, negotiate, verify, pay, with nobody typing, and
+  a real Razorpay order at the end of it. The card tap stays simulated on
+  purpose — see above.
 
 - **The buyer now checks, and it did not before.** For most of this build the
   only things that ever verified a signature were the CLI, the tests, the issuer

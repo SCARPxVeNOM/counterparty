@@ -32,3 +32,21 @@ export {
   type SegmentMember,
   type SegmentSource,
 } from './campaign';
+
+export {
+  BuyingAgent,
+  type BuyerMandate,
+  type BuyerOutcome,
+  type BuyerRun,
+  type BuyerStep,
+  type BuyingAgentOptions,
+  type MerchantEndpoint,
+  type PaymentReceipt,
+  type StepKind,
+} from './buying-agent';
+
+export {
+  LocalMerchant,
+  type LocalMerchantOptions,
+  type PaymentExecutor,
+} from './local-merchant';

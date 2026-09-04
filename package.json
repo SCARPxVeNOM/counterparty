@@ -16,7 +16,8 @@
     "demo": "tsx scenarios/run-all.ts",
     "smoke:live": "tsx scripts/smoke-live.ts",
     "record:cassettes": "tsx scripts/record-cassettes.ts",
-    "tamper:check": "tsx scripts/tamper-ledger.ts"
+    "tamper:check": "tsx scripts/tamper-ledger.ts",
+    "buy": "tsx scripts/autonomous-buy.ts"
   },
   "devDependencies": {
     "@counterparty/agents": "workspace:*",

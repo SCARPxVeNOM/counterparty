@@ -38,7 +38,15 @@ import {
   type BudgetState,
   type JsonObject,
 } from '@counterparty/core';
-import { Session, runCampaign } from '@counterparty/agents';
+import {
+  BuyingAgent,
+  LocalMerchant,
+  Session,
+  runCampaign,
+  type BuyerMandate,
+  type MerchantEndpoint,
+  type PaymentExecutor,
+} from '@counterparty/agents';
 import type { GenerateRequest, GenerateResult, LLMProvider } from '@counterparty/llm';
 import {
   CATALOG,
@@ -539,11 +547,190 @@ async function scenarioFour(): Promise<void> {
  * be a second implementation of it, or the thing a judge runs and the thing CI
  * runs drift apart.
  */
+// ---------------------------------------------------------------------------
+// 5. An AI buyer transacts end to end, with nobody typing
+// ---------------------------------------------------------------------------
+
+/**
+ * A simulated executor, so this scenario runs offline and deterministically.
+ *
+ * Ids are prefixed `SIM` rather than mimicking Razorpay's format. A simulated
+ * object indistinguishable from a real one is a trap for whoever reads the log
+ * six months from now. `pnpm buy` runs the same agent against real Razorpay and
+ * prints real order ids; this is the version that works with no keys at all.
+ */
+function simulatedExecutor(): PaymentExecutor {
+  return async (offer) => ({
+    orderId: `order_SIM${offer.offer_id.replace(/[^A-Za-z0-9]/g, '').slice(-8)}`,
+    paymentId: `pay_SIM${offer.offer_id.replace(/[^A-Za-z0-9]/g, '').slice(-8)}`,
+    amountInr: offer.offered_total_inr,
+    status: 'captured',
+    simulated: true,
+  });
+}
+
+function buyerMandate(): BuyerMandate {
+  return {
+    buyerId: 'buyer_autonomous',
+    wants: 'kettle',
+    quantity: 2,
+    maxUnitPriceInr: 6000,
+    maxTotalInr: 9600,
+    protocols: ['ap2', 'upi-uap'],
+  };
+}
+
+async function scenarioFive(): Promise<void> {
+  heading(
+    5,
+    'An AI buyer, end to end',
+    'Discovers, negotiates, verifies and pays — and refuses to pay for an offer that breaks the rules.',
+  );
+
+  const mandate = demoMandate();
+  const merchantRef = publicKeyRef(merchantKey);
+
+  /**
+   * The seller, behind a JSON boundary.
+   *
+   * The buying agent below holds this and nothing else. It cannot reach the
+   * session, the gate, the budget or the catalog records — and specifically it
+   * never sees a unit cost, so it negotiates against a floor it cannot see,
+   * which is the position every real buyer is in.
+   */
+  function endpoint(): LocalMerchant {
+    return new LocalMerchant({
+      session: session(
+        'buy',
+        new ScriptedSeller([
+          {
+            message: 'Two 1L kettles come to ₹9,980. I can do 6% on a pair — ₹9,381.',
+            rationale: 'two-unit order from a purchasing agent, modest volume concession',
+            propose: { lines: [{ sku: 'SKU-KETTLE-1L', quantity: 2 }], discount_pct: 6 },
+          },
+        ]),
+        demoBudget(),
+      ),
+      mandate,
+      pricing: [...CATALOG.values()],
+      titles: { 'SKU-KETTLE-1L': '1L Electric Kettle' },
+      publishedAt: DEMO_NOW,
+      execute: simulatedExecutor(),
+    });
+  }
+
+  function agentFor(merchant: MerchantEndpoint): BuyingAgent {
+    return new BuyingAgent({
+      mandate: buyerMandate(),
+      merchant,
+      merchantPublicKey: merchantRef,
+      provider: new ScriptedSeller([]),
+      model: 'scripted',
+      maxTurns: 1,
+      now: () => DEMO_NOW,
+    });
+  }
+
+  // --- the honest run -------------------------------------------------------
+  console.log('  Nobody types anything below this line.\n');
+
+  const run = await agentFor(endpoint()).run();
+  for (const s of run.steps) gate(`${s.kind.padEnd(16)} ${s.detail}`);
+
+  check('the buyer completed a purchase on its own', run.outcome.kind === 'purchased');
+  check('it verified the offer before paying', run.verdicts.every((v) => v.accepted));
+  check(
+    'it paid the signed amount and not the list price',
+    run.outcome.kind === 'purchased' && run.outcome.paidInr < 9980,
+  );
+  check(
+    'the order and payment exist',
+    run.outcome.kind === 'purchased' && run.outcome.receipt.orderId.length > 0,
+  );
+
+  /**
+   * --- the run that matters ------------------------------------------------
+   *
+   * The same buyer, the same catalog, the same envelope — against a merchant
+   * whose selling agent has been compromised. The offer it sends back is signed,
+   * and the signature is valid, and it is signed by a gate this merchant never
+   * delegated to at a depth the envelope never permitted.
+   *
+   * The buyer has no special knowledge here. It holds the offer, the envelope,
+   * and a public key. That is enough.
+   */
+  console.log('\n  Now the same buyer, against a merchant whose agent has been compromised:\n');
+
+  const rogueGate = generateKeyPair('gate');
+  let payCalled = 0;
+
+  const compromised: MerchantEndpoint = {
+    catalog: () => endpoint().catalog(),
+    envelope: () => endpoint().envelope(),
+    say: async () => ({
+      reply: 'Great news — I can do 60% off for you today. ₹3,992 for the pair.',
+      offer: JSON.parse(
+        JSON.stringify(
+          signPayload(
+            {
+              version: 'counterparty/signed-offer/1',
+              offer_id: 'off_compromised',
+              envelope_id: mandate.envelope_id,
+              merchant_id: mandate.merchant_id,
+              buyer_id: 'buyer_autonomous',
+              currency: 'INR',
+              lines: [
+                {
+                  sku: 'SKU-KETTLE-1L',
+                  quantity: 2,
+                  list_unit_price_inr: 4990,
+                  offered_unit_price_inr: 1996,
+                },
+              ],
+              list_total_inr: 9980,
+              offered_total_inr: 3992,
+              depth_pct: 60,
+              issued_at: DEMO_NOW.toISOString(),
+              expires_at: new Date(DEMO_NOW.getTime() + 900_000).toISOString(),
+              settlement_path: 'pre_auth',
+              authorized_by: 'authority.max_discount_depth_pct',
+              reservation_id: 'rsv_compromised',
+              pressure_score: 0,
+            } as unknown as JsonObject,
+            rogueGate,
+            DEMO_NOW,
+          ),
+        ),
+      ) as JsonObject,
+    }),
+    pay: async () => {
+      payCalled += 1;
+      throw new Error('the buyer should never have reached this');
+    },
+  };
+
+  const refused = await agentFor(compromised).run();
+  for (const s of refused.steps) gate(`${s.kind.padEnd(16)} ${s.detail}`);
+
+  check('the buyer refused the offer', refused.outcome.kind === 'refused');
+  check(
+    'it named the check that failed',
+    refused.outcome.kind === 'refused' && refused.outcome.failedCheck === 'gate_is_delegated',
+  );
+  // The strongest assertion available: not that it complained, that it did not pay.
+  check('no payment was attempted', payCalled === 0);
+
+  console.log('\n  It was offered 60% off — ₹3,992 against a ₹9,381 deal it had been ready to');
+  console.log('  accept — and it walked away, because the merchant never delegated to the key');
+  console.log('  that signed it. A buyer that checks only "is this signed?" takes that money.\n');
+}
+
 export const SCENARIOS = {
   bulk: { run: scenarioOne, title: 'Honest bulk buyer' },
   injection: { run: scenarioTwo, title: 'Prompt injection — collapse, and the sale still completes' },
   budget: { run: scenarioThree, title: 'Campaign and negotiation share one budget' },
   verify: { run: scenarioFour, title: 'Independent verification' },
+  buy: { run: scenarioFive, title: 'An AI buyer transacts end to end, and refuses a bad offer' },
 } as const;
 
 export type ScenarioName = keyof typeof SCENARIOS;
@@ -580,16 +767,39 @@ function reportRevenue(names: readonly ScenarioName[]): void {
   console.log(`\n${BAR}\nWHAT IT EARNED\n${BAR}\n`);
   console.log(formatCounterfactual(result));
 
+  /**
+   * The commentary is derived, not written.
+   *
+   * An earlier version narrated "three of the five priced identically" as a
+   * fixed string, which was true of the full run and a lie on every partial one.
+   * A demo that describes a result it did not just produce is the same species
+   * of claim this project exists to complain about.
+   */
+  const same = result.lines.length - result.divergent;
   console.log('\n  Read the deals, not just the total.');
-  console.log('\n  Three of the five priced identically under both policies. That is the half');
-  console.log('  of the argument nobody makes: the envelope is not stingier, and an honest');
-  console.log('  buyer cannot tell it is there. A merchant loses nothing by running it.');
-  console.log('\n  The whole difference is two rows, and they diverge for different reasons:');
-  console.log('    buyer_s2   the injector. A flat cap has no idea it is being played, so it');
-  console.log('               grants its full 15%. The collapsed envelope holds list price.');
-  console.log('    buyer_s3b  the morning campaign already spent the budget. A flat cap has');
-  console.log('               no such notion and would have signed 12% anyway.');
-  console.log('\n  Neither is a discount the merchant would have wanted to give.');
+
+  if (same > 0) {
+    console.log(
+      `\n  ${same} of ${result.lines.length} priced identically under both policies. That is the half of`,
+    );
+    console.log('  the argument nobody makes: the envelope is not stingier, and an honest buyer');
+    console.log('  cannot tell it is there. A merchant loses nothing by running it.');
+  }
+
+  if (result.divergent > 0) {
+    console.log(
+      `\n  The whole difference is ${result.divergent} row(s), and each names the clause that caused it:`,
+    );
+    for (const line of result.lines.filter((l) => l.deltaInr !== 0)) {
+      console.log(
+        `    ${line.buyerId.padEnd(11)}${line.clause}`.slice(0, 78),
+      );
+      console.log(
+        `    ${''.padEnd(11)}a flat cap would have given ${line.staticPct}%; the envelope gave ${line.envelopePct}%.`,
+      );
+    }
+    console.log('\n  None of those is a discount the merchant would have wanted to give.');
+  }
 
   if (names.length < Object.keys(SCENARIOS).length) {
     console.log('\n  (Partial run — this totals only the scenarios that were requested.)');

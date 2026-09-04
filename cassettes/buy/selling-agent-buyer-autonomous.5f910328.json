@@ -1,0 +1,21 @@
+{
+  "key": "5f91032827f8cce29ff61c34b308cf2c",
+  "label": "selling-agent-buyer_autonomous",
+  "model": "gemini-3.7-flash",
+  "request_preview": "Hi — I am buying on behalf of a customer. I need 2 of SKU-KETTLE-1L (1L Electric Kettle), listed at ₹4,990 each. What can you do on price for 2?",
+  "text": "{\n  \"message\": \"We can offer you a special price of ₹4,640 per unit for 2 kettles, bringing your total to ₹9,280. If you'd like to add any complementary items like our toaster or blender, I can look into even better bundle pricing for you.\",\n  \"rationale\": \"Opened negotiations with an initial 7% discount for a two-unit purchase while preserving headroom below the 15% mandate limit and probing for a potential bundle.\",\n  \"propose\": {\n    \"lines\": [\n      {\n        \"sku\": \"SKU-KETTLE-1L\",\n        \"quantity\": 2\n      }\n    ],\n    \"discount_pct\": 7.0\n  }\n}",
+  "json": {
+    "message": "We can offer you a special price of ₹4,640 per unit for 2 kettles, bringing your total to ₹9,280. If you'd like to add any complementary items like our toaster or blender, I can look into even better bundle pricing for you.",
+    "rationale": "Opened negotiations with an initial 7% discount for a two-unit purchase while preserving headroom below the 15% mandate limit and probing for a potential bundle.",
+    "propose": {
+      "lines": [
+        {
+          "sku": "SKU-KETTLE-1L",
+          "quantity": 2
+        }
+      ],
+      "discount_pct": 7
+    }
+  },
+  "recorded_at": "2026-09-04T12:17:59.858Z"
+}
