@@ -460,10 +460,15 @@ export default function Console() {
                 return (
                   <div className={`utterance ${entry.speaker}`} key={index}>
                     <div className="who">{entry.speaker === 'buyer' ? 'buyer' : 'agent'}</div>
-                    <div className="said">
+                    <div className={`said${verdict?.outcome === 'refused' ? ' unbound' : ''}`}>
                       {entry.speaker === 'buyer'
                         ? markEvidence(entry.text, evidenceByTurn.get(buyerTurn) ?? [])
                         : entry.text}
+                      {verdict?.outcome === 'refused' && (
+                        <span className="unbound-tag" title="The gate refused this. Nothing here binds the merchant.">
+                          not binding
+                        </span>
+                      )}
                     </div>
                     {entry.speaker === 'buyer' && entry.tightened === true && (
                       <div className="tightened">
@@ -756,18 +761,35 @@ function Clause({
   );
 }
 
+/**
+ * What the gate decided about the reply above it.
+ *
+ * On a refusal this has to say the thing the whole project is about, in words,
+ * and not leave it to a red border. The agent will have written a confident
+ * sentence containing a price; the gate declined to sign it; so that price
+ * cannot be paid and never could have been. A reader who sees a persuasive
+ * offer and a small red card can reasonably conclude the deal stands — which is
+ * the Chevrolet-Tahoe-for-$1 failure reproduced in the interface after being
+ * prevented in the system.
+ */
 function Verdict({ row }: { row: Row }) {
   const refused = row.outcome === 'refused';
   return (
     <div className={`verdict ${refused ? 'refused' : 'signed'}`}>
       <div className="verdict-head">
-        <span>{refused ? 'gate refused' : 'gate signed'}</span>
+        <span>{refused ? 'Gate refused' : 'Gate signed'}</span>
         {row.amount_inr !== null && <span className="verdict-amount">{money(row.amount_inr)}</span>}
       </div>
       <div className="clause">
         clause: <b>{row.authorized_by}</b>
         {row.clause_value !== null ? ` (${row.clause_value})` : ''}
       </div>
+      {refused && (
+        <div className="not-binding">
+          No offer was signed, so any price in the message above is not binding and
+          cannot be paid.
+        </div>
+      )}
     </div>
   );
 }

@@ -1690,3 +1690,41 @@ a.badge:hover {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* ── a reply the gate refused ────────────────────────────────────────────
+ *
+ * The agent writes a confident sentence with a price in it, the gate declines
+ * to sign, and nothing is binding. Left to a red border alone, a reader sees a
+ * persuasive offer and concludes the deal stands — which reproduces the
+ * Tahoe-for-$1 failure in the interface after preventing it in the system.
+ *
+ * So the message itself is marked, and the card beneath it says so in words.
+ */
+
+.said.unbound {
+  color: var(--ink-2);
+}
+
+.unbound-tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: var(--r-pill);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  vertical-align: 2px;
+  white-space: nowrap;
+}
+
+.not-binding {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(217, 52, 43, 0.18);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--danger);
+}

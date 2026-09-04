@@ -12,6 +12,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "dev": "pnpm --filter @counterparty/web dev",
+    "build:web": "pnpm --filter @counterparty/web build",
+    "start": "pnpm --filter @counterparty/web build && pnpm --filter @counterparty/web start",
     "cli": "tsx apps/cli/src/index.ts",
     "demo": "tsx scenarios/run-all.ts",
     "smoke:live": "tsx scripts/smoke-live.ts",
