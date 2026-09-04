@@ -5,6 +5,7 @@ Three from the running console, three from the Razorpay Dashboard. All committed
 | file | what it shows | status |
 |---|---|---|
 | `razorpay-captured.jpg` | the console's Razorpay panel, with the audit rows it produced | ✅ |
+| `razorpay-checkout.jpg` | Razorpay Checkout open on the gate-signed order | ✅ |
 | `razorpay-payment-link.jpg` | a real Payment Link issued at the gate-signed price | ✅ |
 | `collapse.jpg` | the envelope at 0%, and the sale still available through Razorpay | ✅ |
 | `dashboard-order-notes.png` | an order in Razorpay's Dashboard, with `authorized_by` in its Notes | ✅ |

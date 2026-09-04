@@ -70,7 +70,7 @@ export async function POST(request: Request) {
   const body = (await request.json()) as {
     id?: string;
     offerId?: string;
-    action?: 'settle' | 'refund' | 'link';
+    action?: 'settle' | 'refund' | 'link' | 'order' | 'confirm';
     refundInr?: number;
     paymentId?: string;
   };
@@ -89,6 +89,19 @@ export async function POST(request: Request) {
   try {
     if (body.action === 'refund') {
       return NextResponse.json(await refund(rails, sessionId, body));
+    }
+
+    /**
+     * Confirm a payment a human actually made.
+     *
+     * The browser hands back a payment id after Razorpay Checkout closes. That
+     * id is not trusted: it is re-fetched from Razorpay, and its `order_id`
+     * must match the order the gate signed. A client that could name any
+     * payment id and have it recorded against any order would make the audit
+     * trail a suggestion box.
+     */
+    if (body.action === 'confirm') {
+      return NextResponse.json(await confirm(rails, sessionId, body));
     }
 
     const offer = session.signedOffers.find((o) => o.offer_id === body.offerId);
@@ -134,6 +147,26 @@ export async function POST(request: Request) {
         linkUrl: link.short_url,
         amountInr: offer.offered_total_inr,
         keyId: loadConfig().razorpayKeyId,
+      });
+    }
+
+    /**
+     * Just the order, for a human to pay.
+     *
+     * Razorpay Checkout needs an order id and the public key; the browser opens
+     * it, a person taps a card, and `confirm` above closes the loop with a real
+     * payment. The order carries `payment_capture: 0`, so it holds in
+     * `authorized` until the merchant captures — which is §5.3's option made
+     * literal rather than described.
+     */
+    if (body.action === 'order') {
+      const created = await rails.createOrder(offer);
+      return NextResponse.json({
+        orderId: created.id,
+        amountInr: offer.offered_total_inr,
+        keyId: loadConfig().razorpayKeyId,
+        merchant: demoMandate().merchant_id,
+        awaitingCard: true,
       });
     }
 
@@ -295,5 +328,98 @@ async function refund(
     refundId: executed.id,
     amountInr: amount,
     isPartial: decision.authorization.is_partial,
+  };
+}
+
+/**
+ * A payment the cardholder actually made, verified against Razorpay.
+ *
+ * Everything here is real: a human tapped a card at Checkout, Razorpay holds an
+ * authorized payment against the gate-signed order, and this captures it. The
+ * two audit rows carry the real payment id, so the trail and the Dashboard agree.
+ */
+async function confirm(
+  rails: Rails,
+  sessionId: string,
+  body: { offerId?: string; orderId?: string; paymentId?: string },
+) {
+  const session = sessionFor(sessionId);
+  const offer = session.signedOffers.find((o) => o.offer_id === body.offerId);
+  if (offer === undefined || body.paymentId === undefined || body.orderId === undefined) {
+    return { error: 'a confirmation needs a signed offer, an order id and a payment id' };
+  }
+
+  const config = loadConfig();
+  const client = new RazorpayClient({
+    credentials: { keyId: config.razorpayKeyId, keySecret: config.razorpayKeySecret },
+  });
+
+  // Never trust the id the browser sent — read it back from Razorpay.
+  const raw = (await client.get(`/payments/${body.paymentId}`)) as {
+    id: string;
+    order_id: string | null;
+    status: string;
+    amount: number;
+    method?: string;
+  };
+
+  if (raw.order_id !== body.orderId) {
+    return { error: `payment ${raw.id} is not against order ${body.orderId}` };
+  }
+
+  const payment = {
+    id: raw.id,
+    order_id: raw.order_id ?? '',
+    amount_paise: raw.amount,
+    status: raw.status as 'authorized' | 'captured',
+    method: raw.method ?? 'card',
+    captured: raw.status === 'captured',
+    authorized_at: new Date().toISOString(),
+    simulated: false as const,
+  };
+
+  ledger().append({
+    ...base(sessionId),
+    at: new Date().toISOString(),
+    action: 'authorize',
+    outcome: 'executed',
+    authorized_by: 'authority.capture_window_hours',
+    clause_value: demoMandate().authority.capture_window_hours,
+    agent_rationale: `a cardholder authorized ${offer.offer_id} at the signed price`,
+    offer_id: offer.offer_id,
+    buyer_id: offer.buyer_id,
+    amount_inr: raw.amount / 100,
+    list_inr: offer.list_total_inr,
+    depth_pct: offer.depth_pct,
+    rails: [body.orderId, raw.id],
+    signature: offer.signature.sig,
+  });
+
+  const captured = await rails.captureFull(payment);
+
+  ledger().append({
+    ...base(sessionId),
+    at: new Date().toISOString(),
+    action: 'capture_full',
+    outcome: 'executed',
+    authorized_by: 'authority.max_discount_depth_pct',
+    clause_value: demoMandate().authority.max_discount_depth_pct,
+    agent_rationale: `captured ${captured.amount_paise / 100} on ${captured.id} — real cardholder`,
+    offer_id: offer.offer_id,
+    buyer_id: offer.buyer_id,
+    amount_inr: captured.amount_paise / 100,
+    settlement_path: 'pre_auth',
+    rails: [body.orderId, captured.id],
+    signature: offer.signature.sig,
+  });
+
+  return {
+    orderId: body.orderId,
+    paymentId: captured.id,
+    amountInr: captured.amount_paise / 100,
+    status: captured.status,
+    path: 'pre_auth',
+    simulatedCard: false,
+    keyId: config.razorpayKeyId,
   };
 }

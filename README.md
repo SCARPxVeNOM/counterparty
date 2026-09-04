@@ -120,23 +120,34 @@ model call and takes ~45s. Both are real; only one is watchable.
 ## Razorpay, from the console
 
 The negotiation *is* the checkout. A signed offer goes to the rails from the
-screen it was signed on — **Charge** creates a real Razorpay order, or **a
-payment link** hands the buyer a live URL they open on their own phone.
+screen it was signed on: **pay by card** at Razorpay Checkout, **send a payment
+link** the buyer opens on their own phone, or **simulate the tap** to demo
+without a card.
 
 ![Razorpay panel in the console, with the audit rows it produced](docs/images/razorpay-captured.jpg)
 
-**What is real and what is not.** The order is a real API call. The card tap is
-simulated, and everything downstream of it inherits that: `SimAuthorizer` mints a
-`pay_SIM…` id that never reaches Razorpay, and `captureFull` short-circuits on
-`payment.simulated` rather than calling `/payments/:id/capture`. So the order
-below sits at **Created** with **No Payments**, exactly as it should:
+**Pay by card** opens Razorpay's own Checkout against the gate-signed order —
+cards, UPI, netbanking, wallets, the lot:
+
+![Razorpay Checkout, opened on the gate-signed order](docs/images/razorpay-checkout.jpg)
+
+Tap `4100 2800 0000 1007` and the payment is real. The browser hands the payment
+id back, the server **re-fetches it from Razorpay and checks its `order_id`
+matches** — a client that could name any payment and have it recorded against any
+order would make the audit trail a suggestion box — then captures. Two rows land
+with the real ids, and the Dashboard and the ledger agree.
+
+The order carries `payment_capture: 0`, so it holds in `authorized` until the
+merchant captures. That is §5.3's decaying option made literal rather than
+described.
+
+**Simulate the card tap** is the other button, for demoing without a card. It
+creates the real order and stops: `SimAuthorizer` mints a `pay_SIM…` that never
+reaches Razorpay, and `captureFull` short-circuits on `payment.simulated`. The
+order then sits at **Created** with **No Payments**, exactly as it should — and
+the audit row says so rather than claiming a capture:
 
 ![The order in the Razorpay Dashboard, with the clause in its Notes](docs/images/dashboard-order-notes.png)
-
-That is the honest boundary and not a gap to close — authorizing a payment is a
-human pressing a button on their own device. The one real capture in this account
-came from a human tapping a card: `pay_TUQ7MKc8zXf1gE`, ₹4,491, `captured`, with
-a ₹500 refund against it. `pnpm smoke:live --wait` is that path.
 
 **The Razorpay object carries the chain.** Look at the Notes panel above:
 `offer_id`, `envelope_id`, `depth_pct` — and scrolled just out of frame,
@@ -185,11 +196,11 @@ number in a request body has no path to a charge.
 | API | Where |
 |---|---|
 | Orders · create, fetch | console **Charge**, `pnpm buy`, cohort reads |
-| Payments · capture, fetch | `settle-order.ts`, `pnpm smoke:live` — **not** the console, whose card tap is simulated |
+| Payments · fetch, capture | console **Pay by card**, `settle-order.ts`, `pnpm smoke:live` |
 | **Payment Links · create** | console, `pnpm campaign:live --issue` |
 | Refunds · create | `refund-payment.ts`, gate-authorized |
 | Plans · Subscriptions | `pnpm smoke:live` |
-| Checkout | `pnpm smoke:live --wait` — real card, real tap |
+| **Checkout** | **the console's Pay by card**, and `pnpm smoke:live --wait` |
 | Offers | read-only. **Razorpay has no create-offer API** — `POST /offers` is 405 ([C6](docs/CORRECTIONS.md)) |
 
 ---
@@ -396,7 +407,7 @@ The middle column is fussy about what has actually been *done*.
 | 4 | **Payment link at the signed price** | ✅ console + campaign — `plink_TY8UrCfdVSXN4N` |
 | 5 | Authorize | ✅ **a human card at Checkout** — `pay_TUQ7MKc8zXf1gE` |
 | 6 | ~~Partial capture~~ → settle at conceded | replaced — the primitive does not exist ([C1](docs/CORRECTIONS.md)) |
-| 7 | Full capture | ✅ against that real payment. The console's capture is simulated along with its card tap |
+| 7 | Full capture | ✅ against that real payment, and from the console once a card is tapped. The **Simulate** button does not capture, and the row says so |
 | 8 | Deliberate lapse | **no API call exists to make** — the action is the *absence* of a capture |
 | 9 | Partial refund | ✅ `rfnd_TUTgRaSA1TN6cr` — ₹500 off a real captured payment |
 | 10 | Full refund | not fired — the only captured payment available is the completed-sale artifact |

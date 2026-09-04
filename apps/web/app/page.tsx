@@ -64,7 +64,33 @@ interface MoneyResult {
   keyId?: string;
   linkId?: string;
   linkUrl?: string;
+  merchant?: string;
+  awaitingCard?: boolean;
   error?: string;
+}
+
+declare global {
+  interface Window {
+    Razorpay?: new (options: Record<string, unknown>) => { open: () => void };
+  }
+}
+
+/**
+ * Razorpay's own Checkout, loaded on demand.
+ *
+ * Not bundled: Razorpay require checkout.js be served from their domain so the
+ * payment form is theirs end to end. Loading it lazily also keeps a console
+ * that may never take a payment from fetching it at all.
+ */
+async function loadCheckout(): Promise<void> {
+  if (typeof window === 'undefined' || window.Razorpay !== undefined) return;
+  await new Promise<void>((resolve, reject) => {
+    const tag = document.createElement('script');
+    tag.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    tag.onload = () => resolve();
+    tag.onerror = () => reject(new Error('could not load Razorpay Checkout'));
+    document.body.appendChild(tag);
+  });
 }
 
 interface View {
@@ -281,7 +307,7 @@ export default function Console() {
    * has no path to a charge.
    */
   const takePayment = useCallback(
-    async (offerId: string, action?: 'link') => {
+    async (offerId: string, action?: 'link' | 'order') => {
       setPaying(true);
       try {
         const response = await fetch('/api/pay', {
@@ -291,6 +317,80 @@ export default function Console() {
         });
         setMoney((await response.json()) as MoneyResult);
         await load();
+      } finally {
+        setPaying(false);
+      }
+    },
+    [sessionId, load],
+  );
+
+  /**
+   * The real one: a human taps a card at Razorpay Checkout.
+   *
+   * Creates the gate-signed order, opens Razorpay's own form against it, and
+   * hands the resulting payment id back to be verified server-side. The order
+   * carries `payment_capture: 0`, so it holds in `authorized` until the merchant
+   * captures — the decaying option §5.3 is about, rather than a description of
+   * one.
+   */
+  const payWithCard = useCallback(
+    async (offerId: string) => {
+      setPaying(true);
+      try {
+        const opened = (await (
+          await fetch('/api/pay', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: sessionId, offerId, action: 'order' }),
+          })
+        ).json()) as MoneyResult;
+
+        setMoney(opened);
+        if (opened.orderId === undefined || opened.keyId === undefined) return;
+
+        await loadCheckout();
+        if (window.Razorpay === undefined) {
+          setMoney({ ...opened, error: 'Razorpay Checkout did not load.' });
+          return;
+        }
+
+        new window.Razorpay({
+          key: opened.keyId,
+          order_id: opened.orderId,
+          name: 'Counterparty',
+          description: `Offer ${offerId} — signed by the mandate gate`,
+          theme: { color: '#16a34a' },
+          modal: {
+            ondismiss: () =>
+              setMoney((m) =>
+                m === null ? m : { ...m, error: 'Checkout closed before a card was tapped.' },
+              ),
+          },
+          handler: (result: { razorpay_payment_id?: string }) => {
+            void (async () => {
+              setPaying(true);
+              try {
+                const confirmed = (await (
+                  await fetch('/api/pay', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      id: sessionId,
+                      offerId,
+                      action: 'confirm',
+                      orderId: opened.orderId,
+                      paymentId: result.razorpay_payment_id,
+                    }),
+                  })
+                ).json()) as MoneyResult;
+                setMoney(confirmed);
+                await load();
+              } finally {
+                setPaying(false);
+              }
+            })();
+          },
+        }).open();
       } finally {
         setPaying(false);
       }
@@ -624,9 +724,11 @@ export default function Console() {
                 <span className={`aside ${money_?.linkId !== undefined ? 'ok' : ''}`}>
                   {money_?.linkId !== undefined
                     ? 'LINK ISSUED'
-                    : money_?.orderId !== undefined
-                      ? 'ORDER CREATED'
-                      : 'test mode'}
+                    : money_?.simulatedCard === false
+                      ? 'PAID'
+                      : money_?.orderId !== undefined
+                        ? 'ORDER CREATED'
+                        : 'test mode'}
                 </span>
               </div>
 
@@ -649,12 +751,17 @@ export default function Console() {
                     The gate signed {money(lastOffer.offered_total_inr)}. Taking it to the rails
                     creates a <b>real Razorpay order</b> and captures it.
                   </p>
+                  {/*
+                    The real one first. Everything else on this panel is a
+                    convenience for demoing without a card; this is the path
+                    that ends with money actually moving.
+                  */}
                   <button
                     className="primary"
                     disabled={paying}
-                    onClick={() => void takePayment(lastOffer.offer_id)}
+                    onClick={() => void payWithCard(lastOffer.offer_id)}
                   >
-                    {paying ? 'Calling Razorpay…' : `Charge ${money(lastOffer.offered_total_inr)}`}
+                    {paying ? 'Opening Razorpay…' : `Pay ${money(lastOffer.offered_total_inr)} by card`}
                   </button>
                   {/*
                     The track's "conversational in-app checkout", made literal:
@@ -667,13 +774,22 @@ export default function Console() {
                     disabled={paying}
                     onClick={() => void takePayment(lastOffer.offer_id, 'link')}
                   >
-                    Or send a real payment link
+                    Send a payment link instead
+                  </button>
+                  <button
+                    className="persona wide"
+                    disabled={paying}
+                    onClick={() => void takePayment(lastOffer.offer_id)}
+                  >
+                    Simulate the card tap
                   </button>
                   <span className="money-note">
-                    <b>Charge</b> creates a real order and captures it with a simulated card
-                    tap — authorising a payment is a human pressing a button on their own
-                    device. <b>The link</b> is the other half: a live Razorpay URL anyone can
-                    open and pay with a real test card.
+                    <b>Pay by card</b> opens Razorpay Checkout on the gate-signed order. Use
+                    <code> 4100 2800 0000 1007</code>, any future expiry, any CVV — the
+                    domestic test card. The payment and the capture are real.
+                    <br />
+                    <b>Simulate</b> creates the real order and stops there, for demoing
+                    without a card. Nothing is captured and the order stays at “created”.
                   </span>
                 </div>
               ) : (
@@ -695,9 +811,11 @@ export default function Console() {
                   <div className="money-note in-panel">
                     <b>{money_.orderId}</b> is a real order in{' '}
                     {money_.keyId ?? 'test mode'} — look it up in the Dashboard.
-                    {money_.simulatedCard === true
-                      ? ' The card tap is simulated, so no payment reached Razorpay and the order stands at “created”. pnpm smoke:live --wait is where a real card is tapped.'
-                      : ''}
+                    {money_.awaitingCard === true
+                      ? ' Waiting on a card at Razorpay Checkout.'
+                      : money_.simulatedCard === true
+                        ? ' The card tap was simulated, so no payment reached Razorpay and the order stands at “created”.'
+                        : ' A cardholder paid it and the capture is real.'}
                   </div>
                 </>
               )}
