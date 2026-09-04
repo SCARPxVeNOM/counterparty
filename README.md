@@ -158,7 +158,9 @@ domestic card that worked. Both are in the account as real recorded payments.
 
 ### Payment links, from the console and the campaign
 
-![Payment links issued at gate-signed prices](docs/images/dashboard-payment-links.png)
+![Issuing a payment link from the console](docs/images/razorpay-payment-link.jpg)
+
+![The same links in the Razorpay Dashboard](docs/images/dashboard-payment-links.png)
 
 Four real links, all `Issued`. Read the **Receipt No.** column — it is the offer
 id, so every link traces back to the negotiation that produced it:

@@ -1,11 +1,10 @@
 # Screenshots
 
-Three are committed and were captured from the running console. One is missing
-and only the account holder can take it.
+Three from the running console, three from the Razorpay Dashboard. All committed.
 
 | file | what it shows | status |
 |---|---|---|
-| `razorpay-captured.jpg` | the console after a capture, with the audit rows it produced | ✅ |
+| `razorpay-captured.jpg` | the console's Razorpay panel, with the audit rows it produced | ✅ |
 | `razorpay-payment-link.jpg` | a real Payment Link issued at the gate-signed price | ✅ |
 | `collapse.jpg` | the envelope at 0%, and the sale still available through Razorpay | ✅ |
 | `dashboard-order-notes.png` | an order in Razorpay's Dashboard, with `authorized_by` in its Notes | ✅ |
@@ -28,8 +27,7 @@ the ledger now says so in the row itself.
 
 If you want to re-take or extend these:
 
-Log in at <https://dashboard.razorpay.com>, make sure the **Test Mode** toggle is
-on, and take these four:
+Log in at <https://dashboard.razorpay.com> with **Test Mode** on.
 
 **1. Orders list** — `Transactions → Orders`
 
@@ -61,5 +59,4 @@ The links the console and the win-back campaign issued, including
   fine — they are already in this README.
 - The key id `rzp_test_…` is safe to show; the **key secret** must never appear.
 
-Save the best one as `razorpay-dashboard.jpg` — the README already references it.
-Add the others as `razorpay-dashboard-2.jpg` and so on if you want more than one.
+Keep the existing filenames so the README keeps resolving them.
