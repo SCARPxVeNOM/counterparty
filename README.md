@@ -367,6 +367,49 @@ one thing it does not do.
 
 ---
 
+## Where the money moves, in the console
+
+The negotiation *is* the checkout, and now that is visible rather than
+architectural. A signed offer carries a **Charge** button; pressing it creates a
+real Razorpay order and captures it, from the screen the offer was signed on.
+
+```
+Razorpay                          CAPTURED
+order             order_TY87q17mUQfIXb
+payment           pay_SIMmtnjns6gt1
+captured                     ₹13,772.4
+settlement path               pre_auth
+card                         simulated
+```
+
+Three rows land in the audit trail — the gate signing, the authorize, the
+capture — each citing the clause that permitted it. And the Razorpay object
+itself carries the chain:
+
+```json
+"notes": {
+  "offer_id": "off_console_mtnjns6g_t1",
+  "envelope_id": "env_demo_0001",
+  "authorized_by": "authority.per_buyer_discount_cap_inr",
+  "depth_pct": "8"
+}
+```
+
+Open that order in the Razorpay Dashboard and the clause that authorized the
+price is on the object. The audit trail is not only in this repo.
+
+`/api/pay` sends an **offer id, never an amount**. The route looks it up among
+the offers the gate signed in this session, and `rails.createOrder` takes a
+`SignedOffer` and re-verifies the gate signature before calling Razorpay — so a
+number in a request body has no path to a charge.
+
+The card tap is simulated, and that is not a gap to close: authorising a payment
+is a human pressing a button on their own device. `pnpm smoke:live --wait` is
+where a real person taps a real card, and `pay_TUQ7MKc8zXf1gE` is the one who
+did.
+
+---
+
 ## The check on the other side of the table
 
 Everything above is the merchant verifying the merchant. The rails refuse to

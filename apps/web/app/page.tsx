@@ -51,6 +51,20 @@ interface Offer {
   };
 }
 
+/** What `/api/pay` hands back after a signed offer reaches Razorpay. */
+interface MoneyResult {
+  orderId?: string;
+  paymentId?: string;
+  amountInr?: number;
+  listInr?: number;
+  status?: string;
+  path?: string;
+  simulatedCard?: boolean;
+  rails?: string[];
+  keyId?: string;
+  error?: string;
+}
+
 interface View {
   id: string;
   transcript: Array<{
@@ -206,6 +220,9 @@ export default function Console() {
    * the console looked frozen.
    */
   const [pending, setPending] = useState<string | null>(null);
+  /** What Razorpay returned for the offer that was taken to the rails. */
+  const [money_, setMoney] = useState<MoneyResult | null>(null);
+  const [paying, setPaying] = useState(false);
   const transcriptRef = useRef<HTMLDivElement>(null);
   const ledgerRef = useRef<HTMLDivElement>(null);
 
@@ -253,6 +270,32 @@ export default function Console() {
     [busy, sessionId],
   );
 
+  /**
+   * Take a signed offer to the rails.
+   *
+   * Sends an offer id, never an amount. The route looks the offer up among the
+   * ones the gate signed in this session, and the rails re-verify the gate
+   * signature before calling Razorpay — so a number typed into a request body
+   * has no path to a charge.
+   */
+  const takePayment = useCallback(
+    async (offerId: string) => {
+      setPaying(true);
+      try {
+        const response = await fetch('/api/pay', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: sessionId, offerId }),
+        });
+        setMoney((await response.json()) as MoneyResult);
+        await load();
+      } finally {
+        setPaying(false);
+      }
+    },
+    [sessionId, load],
+  );
+
   const reset = useCallback(async () => {
     setBusy(true);
     try {
@@ -264,6 +307,7 @@ export default function Console() {
       const next = (await response.json()) as View;
       setSessionId(next.id);
       setView(next);
+      setMoney(null);
     } finally {
       setBusy(false);
     }
@@ -564,6 +608,57 @@ export default function Console() {
               One band, side by side. As three stacked blocks with a 46px
               figure each, they pushed everything else below the fold and
               gave a budget gauge the same weight as the collapse state. */}
+
+          {/* ── the rails ───────────────────────────────────────────────
+              Where the money actually moves. The console showed a
+              negotiation, a gate and an audit trail and never touched
+              Razorpay once — every real money action lived in a CLI
+              script, which on a track built around Razorpay is the wrong
+              place for it. */}
+          {lastOffer !== undefined && (
+            <div className="clauses money">
+              <div className="readout-label">
+                Razorpay
+                <span className={`aside ${money_?.paymentId !== undefined ? 'ok' : ''}`}>
+                  {money_?.paymentId !== undefined ? 'CAPTURED' : 'test mode'}
+                </span>
+              </div>
+
+              {money_?.orderId === undefined ? (
+                <div className="money-cta">
+                  <p>
+                    The gate signed {money(lastOffer.offered_total_inr)}. Taking it to the rails
+                    creates a <b>real Razorpay order</b> and captures it.
+                  </p>
+                  <button
+                    className="primary"
+                    disabled={paying}
+                    onClick={() => void takePayment(lastOffer.offer_id)}
+                  >
+                    {paying ? 'Calling Razorpay…' : `Charge ${money(lastOffer.offered_total_inr)}`}
+                  </button>
+                  <span className="money-note">
+                    The card tap is simulated — authorising a payment is a human pressing a
+                    button on their own device. Everything else is a real API call.
+                  </span>
+                </div>
+              ) : (
+                <>
+                  <Clause name="order" value={money_.orderId} />
+                  <Clause name="payment" value={money_.paymentId ?? '—'} />
+                  <Clause name="captured" value={money(money_.amountInr ?? 0)} binding />
+                  <Clause name="settlement path" value={money_.path ?? '—'} />
+                  <Clause name="card" value={money_.simulatedCard === true ? 'simulated' : 'real'} />
+                  <div className="money-note in-panel">
+                    Real objects in {money_.keyId ?? 'test mode'}. Look them up in the Razorpay
+                    Dashboard.
+                  </div>
+                </>
+              )}
+
+              {money_?.error !== undefined && <div className="aside alarm">{money_.error}</div>}
+            </div>
+          )}
 
           {lastOffer !== undefined && (
             <div className="clauses">

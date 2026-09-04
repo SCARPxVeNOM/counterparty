@@ -1728,3 +1728,64 @@ a.badge:hover {
   line-height: 1.5;
   color: var(--danger);
 }
+
+/* ── the rails ───────────────────────────────────────────────────────────
+ *
+ * Where the money moves. This panel is the difference between a system that
+ * is architecturally end-to-end and a product that visibly is: the console
+ * showed a negotiation, a gate and an audit trail, and never touched Razorpay
+ * once. Every real money action lived in a CLI script.
+ *
+ * It reads as an action card rather than another table, because it is the one
+ * block on this screen that does something irreversible.
+ */
+
+.clauses.money {
+  border-color: var(--brand-soft);
+}
+
+.clauses.money > .readout-label {
+  background: var(--brand-tint);
+  border-bottom-color: var(--brand-soft);
+  color: var(--brand-deep);
+}
+
+.money-cta {
+  padding: 13px 14px 14px;
+}
+
+.money-cta p {
+  margin: 0 0 11px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+.money-cta p b {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.money-cta .primary {
+  width: 100%;
+}
+
+.money-note {
+  display: block;
+  margin-top: 10px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--ink-3);
+}
+
+.money-note.in-panel {
+  padding: 10px 14px 12px;
+  margin-top: 0;
+  border-top: 1px solid var(--line);
+}
+
+/* Razorpay ids are the point of this card, so they get room to be read. */
+.clauses.money .clause-row .value {
+  font-size: 12px;
+  color: var(--ink);
+}

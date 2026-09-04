@@ -82,12 +82,12 @@ function providerFor(): { provider: LLMProvider; agentMode: 'gemini' | 'scripted
  */
 let ledgerHandle: SqliteLedger | undefined;
 
-function ledger(): SqliteLedger {
+export function ledger(): SqliteLedger {
   ledgerHandle ??= new SqliteLedger({ path: fromRepoRoot('data', 'console.db') });
   return ledgerHandle;
 }
 
-function sessionFor(id: string): Session {
+export function sessionFor(id: string): Session {
   const existing = sessions.get(id);
   if (existing !== undefined) return existing;
 
