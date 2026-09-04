@@ -33,3 +33,11 @@ export {
 } from './checkout';
 
 export { Rails, type RailsOptions } from './rails';
+
+export {
+  haltedSubscriptionCohort,
+  lapsedAuthorizationCohort,
+  type Cohort,
+  type CohortMember,
+  type CohortOptions,
+} from './cohorts';

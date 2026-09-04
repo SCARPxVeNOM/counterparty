@@ -52,7 +52,7 @@ matter, because saying is not committing.
 ```bash
 pnpm install
 pnpm demo          # five scenarios, headless, deterministic — no keys needed
-pnpm test          # 492 tests, no network, no model calls
+pnpm test          # 505 tests, no network, no model calls
 pnpm typecheck     # the compiler is part of the enforcement — see below
 pnpm dev           # the console at http://localhost:3939
 ```
@@ -63,6 +63,9 @@ pnpm cli onboard razorpayPage        # read a real Razorpay page, show the worki
 
 pnpm buy                             # the same buyer against real Razorpay
 pnpm buy --rogue --resign            # ...offered a validly signed 60% discount
+
+pnpm revenue                         # what the envelope earned, over 18 recorded turns
+pnpm campaign:live                   # win-back against the account's real abandoned orders
 ```
 
 `pnpm demo` needs no API key, no network and no working Razorpay account. It
@@ -471,7 +474,8 @@ packages/
   core/       pure domain, zero I/O — crypto, money, mandate, gate,
               pressure, budget, audit, counterparty, catalog.
               325 tests, no model calls.
-  rails/      Razorpay adapter. Accepts only SignedOffer.        32 tests
+  rails/      Razorpay adapter (accepts only SignedOffer) and the
+              win-back cohorts read from the live account          45 tests
   llm/        provider interface, Gemini, retry and model
               fallback, cassette replay, pressure classifier     23 tests
   agents/     selling agent, the session, and the AI buyer that
@@ -487,7 +491,8 @@ apps/
   cli/        verify · envelope · audit · keys · onboard · replay
 scenarios/    five demo scenarios, runnable whole or one at a time
 scripts/      smoke-live · settle-order · refund-payment ·
-              record-cassettes · tamper-ledger · autonomous-buy
+              record-cassettes · tamper-ledger · autonomous-buy ·
+              live-campaign · revenue-report
 docs/         CORRECTIONS.md — claims that did not survive contact
 ```
 
@@ -626,7 +631,7 @@ to claim and worth being precise about.
 | 9 | Full refund | same `rails.refund` call, differing only in the gate's `is_partial` flag; not fired, because the only captured payment available is the completed-sale artifact |
 | 10 | Subscription creation | ✅ `sub_TUPw7iQnJEKmAv`, `plan_TUPw7UA3pY3CX9` |
 | 11 | Subscription pause / resume | implemented, stub-tested; needs an `active` subscription, and a freshly created one is `created` |
-| 12 | Campaign offer issuance | ✅ as a payment link at the gate-signed price — Razorpay has **no** create-offer API ([C6](docs/CORRECTIONS.md)) |
+| 12 | Campaign offer issuance | ✅ as a payment link at the gate-signed price — Razorpay has **no** create-offer API ([C6](docs/CORRECTIONS.md)). `pnpm campaign:live` now runs it against **11 real abandoned orders** read from the account |
 
 Two of the twelve are compositions rather than primitives, and both say so in
 the audit row. Two more are coded and unit-tested but have not moved live money.
@@ -660,7 +665,7 @@ refund and being allowed to make one are different things.
 | Conversational in-app checkout | the negotiation *is* the checkout |
 | Agent-readable catalog | ACP/UCP shape + AOCF terms + `upi-uap`, built by `/onboard` from a real Razorpay page |
 | Upsell & cross-sell | bundle authority in the envelope |
-| Campaign orchestrator | `runCampaign` calls the same `evaluateQuote` a negotiation calls, threading the same budget |
+| Campaign orchestrator | `runCampaign` calls the same `evaluateQuote` a negotiation calls, threading the same budget — aimed at the account's **real** abandoned checkouts via `pnpm campaign:live` |
 | WHY NOW — NPCI UAP | the selling mandate is the missing mirror of UAP's buyer authority |
 | WHY NOW — ACP / AP2 / x402 | AP2's proven reasoning-layer gap is the thesis |
 | Every money action explainable | audit row cites the binding clause by name |
@@ -778,7 +783,29 @@ honest.
   they can assert the fact that actually matters: which order the human is
   paying.
 
-- **The win-back cohorts are synthetic, and say so.** Subscriptions can now be
+- **The win-back cohort is read from the live account now.** `pnpm campaign:live`
+  builds the segment with `lapsedAuthorizationCohort`, which lists the
+  merchant's orders, drops any with a captured or authorized payment against
+  them, and returns what is left: **11 real abandoned checkouts** in this
+  account, one of them carrying a real failed payment. Every audit row it
+  produces reports `synthetic: false` and carries no `[SYNTHETIC SEGMENT]`
+  prefix, because there is nothing synthetic left to flag.
+
+  The halted-subscription cohort is implemented on the same interface and
+  currently returns **zero members**, correctly: halting one needs a human
+  authorizing the mandate and then four Dashboard charge failures, and this
+  account has three subscriptions all sitting at `created`. The function is not
+  broken; the account simply has nobody in that segment yet, and an empty cohort
+  produces an empty campaign rather than an invented one.
+
+  Two honest limits. The campaign does not *message* anyone — these orders were
+  made by scripts and carry no contact details, so everything up to and
+  including the signed, budgeted, audited authority to make the offer runs, and
+  delivery does not. And the label reports what each buyer abandoned while the
+  offer is one standard win-back SKU, because reconstructing their basket from
+  orders that carry no line items would mean inventing one.
+
+- **The demo's synthetic cohort still exists, and is still labelled.** Subscriptions can now be
   created, and Razorpay's Dashboard **Charge this now** button can drive one to
   `halted` in four failures — so a genuine halted cohort is manufacturable and
   no longer hypothetical. The demo still ships invented segments in
@@ -850,9 +877,16 @@ honest.
   across the whole demo, because it compared what the agent proposed against a
   flat cap — and a collapsed agent proposes 0%, which is indistinguishable from a
   buyer who never asked. The ledger records the ceiling in force alongside the
-  proposal, and the figure is **+₹1,946 (+4.03%)** over four scenarios, with
-  three of five deals pricing identically under both policies. C12 has the full
-  account, including the assumption it rests on.
+  proposal.
+
+  The base is wider now. `pnpm revenue` runs the counterfactual over all
+  **eighteen recorded Gemini turns** rather than the four scripted scenarios,
+  re-adjudicating every one through the live gate: **+₹5,689, +8.74%**, with
+  three of five negotiations pricing identically under both policies. It reports
+  the clause behind each gain, which matters — two were pressure clauses and one
+  was `authority.per_buyer_discount_cap_inr`, an ordinary commercial limit an
+  honest hard negotiator reached by negotiating well. Those are different kinds
+  of thing and a single total hides it. C12 has the assumption it all rests on.
 
 - **The extractor uses no model, and §6 says it does.** The design note describes
   onboarding as `Crawl + LLM extract`. `packages/extract` depends on

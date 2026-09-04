@@ -17,7 +17,9 @@
     "smoke:live": "tsx scripts/smoke-live.ts",
     "record:cassettes": "tsx scripts/record-cassettes.ts",
     "tamper:check": "tsx scripts/tamper-ledger.ts",
-    "buy": "tsx scripts/autonomous-buy.ts"
+    "buy": "tsx scripts/autonomous-buy.ts",
+    "campaign:live": "tsx scripts/live-campaign.ts",
+    "revenue": "tsx scripts/revenue-report.ts"
   },
   "devDependencies": {
     "@counterparty/agents": "workspace:*",
