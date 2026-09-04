@@ -525,3 +525,135 @@ copy contained not just no rows but no schema.
 the bytes currently are. The general form: a SQLite database in WAL mode is not
 one file, and any code that treats it as one is correct only until the moment it
 matters.
+
+---
+
+## C11 — The project was named for a check nothing performed
+
+**Design note §5.1** says *"The buyer agent can verify the signature."* It was
+true of the format and false of the system. Grepping every call site of
+`verifySigned` found four:
+
+- `apps/cli/src/index.ts` — a human at a terminal
+- three test files
+- `packages/core/src/mandate/issue.ts` — the issuer checking its own work
+- `packages/rails/src/rails.ts` — the merchant's rails refusing to execute an
+  unsigned offer
+
+The last one is real and worth having, and it is not a counterparty check: it is
+a merchant verifying a key the merchant already trusts, inside the merchant's own
+process. Nothing anywhere sat on the other side of the table. A project named for
+the party that verifies had no such party in it.
+
+### What was missing was not the signature check
+
+The signature was never the hard part. `verifySigned` had been correct since
+Phase 1. What did not exist was the **chain of authority** as a single callable
+thing:
+
+```
+merchant key ──signs──▶ envelope ──delegates──▶ gate key ──signs──▶ offer
+```
+
+A gate signature alone proves that *some* gate approved a price. That is not in
+doubt and never was. It becomes evidence only when an envelope — signed by the
+merchant, naming one specific gate key — says this merchant delegated to that
+gate and bounded what it could do.
+
+So `verifyAsCounterparty` checks the delegation **before** the signature. Running
+them the other way round produces a confident `ok: true` about nothing: proof
+that a keyholder signed something, from a key nobody authorized. The demo now
+mints a fresh gate key, signs a 60%-off offer with it, asserts the signature is
+genuinely valid, and watches the buyer reject it on `gate_is_delegated`.
+
+### The check that does not exist anywhere else
+
+`within_published_authority` re-derives the offer's terms against the limits the
+merchant signed. It is the only check in this project that the merchant cannot
+perform on the buyer's behalf, because it is the merchant's own conduct being
+checked — and under a compromised or prompt-injected selling agent, an offer
+exceeding published authority is exactly the shape the damage takes.
+
+It deliberately stops short of floor margin and daily budget. Both need data that
+is not public and should not be. A verifier claiming to check them would be the
+more impressive one and the less honest one.
+
+### A duplicate implementation, removed
+
+The CLI had grown its own hand-rolled version of most of this chain. It was
+correct, and it was a second implementation — the day the two disagreed, nobody
+would know which was right. `verifyOffer` now calls the shared function and does
+nothing but print.
+
+Removing the duplicate also removed something worse. The CLI treated
+`--merchant-key` as optional and printed `SKIP` without it, which quietly turned
+a counterparty check into *"these two documents agree with each other"* — a
+property any forger arranges by supplying both. The flag is now required. There
+is no honest reduced version of the check, so there is no reduced version.
+
+---
+
+## C12 — The revenue comparison measured nothing, and said so with a zero
+
+The track asks for an agent that grows the merchant's revenue. The obvious way
+to show it: compare what the envelope earned against a flat discount cap, over
+the audit rows the demo already writes.
+
+The first version recorded `requested_depth_pct` — what the agent asked the gate
+for — and compared it to `min(requested, cap)`. It ran across all four scenarios
+and printed:
+
+```
+  total    ₹54,890    ₹50,199    ₹50,199    +₹0
+```
+
+Zero. Not a rounding artifact — every single deal matched.
+
+### Why it was zero, which is the whole finding
+
+The pressure ratchet tightens the ceiling **before the model speaks**. That
+ordering is deliberate and is the reason a captured model cannot restore its own
+authority. It also means that after a collapse the agent proposes 0% — not
+because it wanted to hold list price, but because 0% was the most it was
+permitted to say.
+
+That row is byte-for-byte indistinguishable from a buyer who never asked for a
+discount. So the comparison saw "asked 0, got 0" on the injector, concluded a
+flat cap would also have granted 0, and reported the two policies as identical.
+The number was not merely wrong; it was wrong in the direction that erases the
+project's best result.
+
+### The fix is a second field, not a cleverer formula
+
+The ledger now records `ceiling_pct` — the discount ceiling in force when the
+agent was asked to propose — alongside `proposed_depth_pct`. With both, a
+constrained agent is distinguishable from an undemanding buyer, and the baseline
+follows:
+
+| what the row shows | what a flat cap would have done |
+|---|---|
+| the agent priced below its ceiling | the same thing. Nothing was binding. |
+| the ceiling was below the cap | granted its own full cap — it has no pressure state to tighten it |
+| the gate cut the agent down after it proposed | signed what the agent proposed — it has no budget clause |
+
+Over the same four scenarios: **+₹1,946, +4.03%**, and three of the five deals
+still price identically under both policies. That last part is the half worth
+saying out loud — the envelope is not stingier, and an honest buyer cannot tell
+it is there.
+
+### The general form
+
+An audit row has to record what was *possible* at the moment of the decision, not
+only what was chosen. Without the ceiling, "the agent proposed 0%" is a fact with
+no meaning attached, and any later analysis of it is guessing. This is the same
+reason `authorized_by` names the tightest applicable clause rather than the first
+one checked: a trail that records outcomes without recording the constraints they
+were made under cannot explain a decision, only accompany it.
+
+### What is still an assumption
+
+Where the envelope's ceiling bound the outcome, the baseline is credited with
+granting its own full ceiling. That is an assumption about a run that never
+happened, it is load-bearing, and it is stated in the module doc, in the README
+and in this file rather than buried in the arithmetic. The recorded injector
+transcript does close at list price. That is evidence, and it is one transcript.

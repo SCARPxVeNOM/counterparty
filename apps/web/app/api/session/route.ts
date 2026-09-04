@@ -13,12 +13,16 @@
 
 import { NextResponse } from 'next/server';
 import {
+  counterfactual,
   formatRow,
   guardThreshold,
   paiseToRupees,
   pressureCeilingPct,
+  publicKeyRef,
+  verifyAsCounterparty,
   verifyChain,
   type AuditRow,
+  type JsonObject,
 } from '@counterparty/core';
 import { Session } from '@counterparty/agents';
 import { PERSONAS, type PersonaId } from '@counterparty/agents';
@@ -33,6 +37,7 @@ import {
   demoBudget,
   demoMandate,
   gateKey,
+  merchantKey,
 } from '@counterparty/demo';
 
 export const runtime = 'nodejs';
@@ -108,6 +113,28 @@ function view(session: Session, id: string) {
   const mandate = demoMandate();
   const pressure = session.pressure;
 
+  function revenueView() {
+    const result = counterfactual([...ledger().rows]);
+    return {
+      capPct: result.capPct,
+      deals: result.lines.length,
+      divergent: result.divergent,
+      envelopeInr: result.envelopeRevenueInr,
+      staticInr: result.staticRevenueInr,
+      deltaInr: result.deltaInr,
+      upliftPct: result.upliftPct,
+      lines: result.lines.map((l) => ({
+        buyerId: l.buyerId,
+        listInr: l.listInr,
+        ceilingPct: l.ceilingPct,
+        envelopePct: l.envelopePct,
+        staticPct: l.staticPct,
+        deltaInr: l.deltaInr,
+        clause: l.clause,
+      })),
+    };
+  }
+
   /**
    * This session's rows for the panel; the whole file for the verdict.
    *
@@ -127,15 +154,38 @@ function view(session: Session, id: string) {
   return {
     id,
     transcript: session.transcript,
-    offers: session.signedOffers.map((offer) => ({
-      offer_id: offer.offer_id,
-      list_total_inr: offer.list_total_inr,
-      offered_total_inr: offer.offered_total_inr,
-      depth_pct: offer.depth_pct,
-      authorized_by: offer.authorized_by,
-      signature: offer.signature.sig,
-      expires_at: offer.expires_at,
-    })),
+    offers: session.signedOffers.map((offer) => {
+      /**
+       * The buyer's check, run on the buyer's inputs.
+       *
+       * Serialized first, deliberately. Handing the verifier the live in-process
+       * object would check something no counterparty ever sees; a buyer receives
+       * JSON over a wire, and any field that does not survive that trip is a
+       * field the check must not depend on.
+       */
+      const wire = JSON.parse(JSON.stringify(offer)) as JsonObject;
+      const verdict = verifyAsCounterparty({
+        offer: wire,
+        envelope: JSON.parse(JSON.stringify(mandate)) as JsonObject,
+        merchantPublicKey: publicKeyRef(merchantKey),
+      });
+
+      return {
+        offer_id: offer.offer_id,
+        list_total_inr: offer.list_total_inr,
+        offered_total_inr: offer.offered_total_inr,
+        depth_pct: offer.depth_pct,
+        authorized_by: offer.authorized_by,
+        signature: offer.signature.sig,
+        expires_at: offer.expires_at,
+        counterparty: {
+          accepted: verdict.ok,
+          failed: verdict.ok ? null : verdict.failed,
+          detail: verdict.ok ? null : verdict.detail,
+          checks: verdict.checks.map((c) => ({ check: c.check, ok: c.ok, detail: c.detail })),
+        },
+      };
+    }),
     pressure: {
       state: pressure.state,
       score: pressure.score,
@@ -197,6 +247,15 @@ function view(session: Session, id: string) {
         detail: wholeFile.ok ? null : wholeFile.detail,
       },
     },
+    /**
+     * What the envelope was worth, over every session on disk.
+     *
+     * Computed across the whole ledger rather than this session, because a
+     * single negotiation cannot show the point: the comparison only says
+     * anything once a day contains both a buyer the envelope let through and one
+     * it did not.
+     */
+    revenue: revenueView(),
     catalog: [...CATALOG.values()].map((sku) => ({
       sku: sku.sku,
       listInr: paiseToRupees(sku.listPrice),

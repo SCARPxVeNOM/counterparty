@@ -13,8 +13,11 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import Database from 'better-sqlite3';
 import { MemoryLedger, verifyChain, type AuditEntry } from '@counterparty/core';
 import { SqliteLedger, memoryLedger, verifyLedgerFile } from '../src/index';
+import { ADDED_COLUMNS, COLUMNS, SCHEMA } from '../src/schema';
+import { toColumns } from '../src/rows';
 
 let directory: string;
 const dbPath = (): string => join(directory, 'ledger.db');
@@ -45,6 +48,8 @@ const rich: AuditEntry = {
   amount_inr: 4240,
   list_inr: 4990,
   depth_pct: 15,
+  proposed_depth_pct: 22,
+  ceiling_pct: 15,
   settlement_path: 'post_auth',
   post_auth_reason: 'partial_fulfilment',
   rails: ['order_ABC123', 'pay_XYZ789'],
@@ -261,5 +266,91 @@ describe('verifyLedgerFile', () => {
 
     const { verification } = verifyLedgerFile(dbPath());
     expect(verification.ok).toBe(false);
+  });
+});
+
+/**
+ * Adding a column to a table that already holds signed history.
+ *
+ * The hazard is specific: every row's hash is taken over its canonical JSON, so
+ * if a new column came back as `null` instead of absent, every pre-existing row
+ * would hash differently and a ledger nobody touched would report as tampered.
+ * `ALTER TABLE ADD COLUMN` with no default is what makes this safe, and this is
+ * the test that says so.
+ */
+describe('a ledger written before a column existed', () => {
+  /** Build a database with the pre-migration schema and real chained rows. */
+  function legacyLedger(entries: readonly AuditEntry[]): void {
+    const memory = new MemoryLedger();
+    for (const entry of entries) memory.append(entry);
+
+    const db = new Database(dbPath());
+    db.pragma('journal_mode = WAL');
+    // The schema as it stood before ADDED_COLUMNS, derived from the current one
+    // so this test cannot drift out of step with it.
+    const legacySchema = ADDED_COLUMNS.reduce(
+      (sql, column) => sql.replace(new RegExp(`\\n\\s*${column.name}\\s+\\w+,`), ''),
+      SCHEMA,
+    );
+    for (const column of ADDED_COLUMNS) {
+      if (legacySchema.includes(column.name)) {
+        throw new Error(`legacy schema still contains ${column.name}`);
+      }
+    }
+    db.exec(legacySchema);
+
+    const columns = COLUMNS.filter((c) => c !== 'proposed_depth_pct' && c !== 'ceiling_pct');
+    const insert = db.prepare(
+      `INSERT INTO audit_rows (${columns.join(', ')}) VALUES (${columns.map((c) => `@${c}`).join(', ')})`,
+    );
+    for (const row of memory.rows) {
+      const { proposed_depth_pct: _p, ceiling_pct: _c, ...rest } = toColumns(row);
+      insert.run(rest);
+    }
+    db.close();
+  }
+
+  it('does not have the column before migrating', () => {
+    legacyLedger([spare]);
+    const db = new Database(dbPath(), { readonly: true });
+    const names = (db.prepare('PRAGMA table_info(audit_rows)').all() as Array<{ name: string }>).map(
+      (c) => c.name,
+    );
+    db.close();
+    expect(names).not.toContain('proposed_depth_pct');
+    expect(names).not.toContain('ceiling_pct');
+  });
+
+  it('still verifies after the column is added', () => {
+    legacyLedger([spare, { ...spare, at: '2026-08-24T14:26:00.000Z' }]);
+
+    const ledger = new SqliteLedger({ path: dbPath() });
+    expect(ledger.rows).toHaveLength(2);
+    expect(ledger.verify().ok).toBe(true);
+    ledger.close();
+  });
+
+  it('reads the migrated rows back with the field absent, not null', () => {
+    legacyLedger([spare]);
+    const ledger = new SqliteLedger({ path: dbPath() });
+    const row = ledger.rows[0];
+    expect(row !== undefined && 'proposed_depth_pct' in row).toBe(false);
+    expect(row !== undefined && 'ceiling_pct' in row).toBe(false);
+    ledger.close();
+  });
+
+  it('continues the chain from a migrated ledger', () => {
+    legacyLedger([spare]);
+
+    const ledger = new SqliteLedger({ path: dbPath() });
+    const appended = ledger.append({ ...rich, at: '2026-08-24T15:00:00.000Z' });
+    expect(appended.seq).toBe(2);
+    expect(appended.proposed_depth_pct).toBe(22);
+    expect(appended.ceiling_pct).toBe(15);
+    expect(ledger.verify().ok).toBe(true);
+    ledger.close();
+
+    // And it survives one more reopen, now that both shapes are in one file.
+    expect(verifyLedgerFile(dbPath()).verification.ok).toBe(true);
   });
 });

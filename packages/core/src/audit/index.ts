@@ -17,3 +17,11 @@ export {
   type LedgerWriter,
   type MoneyAction,
 } from './ledger';
+
+export {
+  counterfactual,
+  formatCounterfactual,
+  type Counterfactual,
+  type CounterfactualLine,
+  type CounterfactualOptions,
+} from './counterfactual';

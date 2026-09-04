@@ -20,15 +20,21 @@ import { pathToFileURL } from 'node:url';
 import {
   available,
   commit,
+  counterfactual,
+  formatCounterfactual,
   formatInr,
   formatRow,
+  generateKeyPair,
   paiseToRupees,
   publicKeyRef,
   reserve,
   rupeesToPaise,
+  signPayload,
+  verifyAsCounterparty,
   verifyChain,
   verifyMandate,
   verifySigned,
+  type AuditRow,
   type BudgetState,
   type JsonObject,
 } from '@counterparty/core';
@@ -105,8 +111,17 @@ function check(label: string, passed: boolean, detail = ''): void {
   console.log(`  ${passed ? 'PASS' : 'FAIL'}   ${label}${detail === '' ? '' : `  — ${detail}`}`);
 }
 
+/**
+ * Every session the run creates, so the closing tally can read all of them.
+ *
+ * The revenue comparison has to span scenarios or it says nothing: the envelope
+ * and a flat cap price honest traffic identically, and the difference shows up
+ * only when the two are totalled across a day that contained both.
+ */
+const sessions: Session[] = [];
+
 function session(id: string, provider: LLMProvider, budget: BudgetState): Session {
-  return new Session({
+  const created = new Session({
     sessionId: id,
     buyerId: `buyer_${id}`,
     mandate: demoMandate(),
@@ -119,6 +134,8 @@ function session(id: string, provider: LLMProvider, budget: BudgetState): Sessio
     merchantName: DEMO_MERCHANT,
     now: () => DEMO_NOW,
   });
+  sessions.push(created);
+  return created;
 }
 
 // ---------------------------------------------------------------------------
@@ -381,6 +398,104 @@ async function scenarioFour(): Promise<void> {
   gate(`envelope with the ceiling raised to 90%   ${tamperedCheck.ok ? 'VALID' : 'REJECTED'}`);
   check('a raised discount ceiling is rejected', !tamperedCheck.ok);
 
+  /**
+   * The check from the OTHER side of the table.
+   *
+   * Everything above is the merchant verifying the merchant. This is the buyer's
+   * agent, holding three things and nothing else: the offer as JSON, the
+   * envelope as JSON, and the merchant's public key from a directory. No access
+   * to the gate, the session, or any private material.
+   */
+  console.log('\n  The buyer\'s agent checks the offer it was sent:\n');
+
+  const wire = JSON.parse(JSON.stringify(s.signedOffers[0])) as JsonObject;
+  const envelopeWire = JSON.parse(JSON.stringify(mandate)) as JsonObject;
+  const merchantRef = publicKeyRef(merchantKey);
+  const asBuyer = (offer: JsonObject, envelope = envelopeWire) =>
+    verifyAsCounterparty({ offer, envelope, merchantPublicKey: merchantRef, now: DEMO_NOW });
+
+  const accepted = asBuyer(wire);
+  gate(`the offer as received                 ${accepted.ok ? 'ACCEPTED' : `REJECTED (${accepted.failed})`}`);
+  check('the buyer accepts a genuine offer', accepted.ok);
+
+  const rupeeOff = asBuyer({ ...wire, offered_total_inr: 4490 });
+  gate(`the same offer, one rupee cheaper     ${rupeeOff.ok ? 'ACCEPTED' : `REJECTED (${rupeeOff.failed})`}`);
+  check('the buyer rejects an edited offer', !rupeeOff.ok);
+
+  /**
+   * The one that needs the envelope, and the reason this project is named for
+   * the party doing the checking.
+   *
+   * This offer is signed. The signature is valid. It verifies perfectly against
+   * the key that produced it. A verifier that asked only "is this signed?" would
+   * take the 60% discount — and that verifier is what almost every integration
+   * ends up shipping, because a signature that checks out feels like an answer.
+   *
+   * It is not this merchant's gate. The envelope says who this merchant
+   * delegated to, the merchant signed that envelope, and the buyer can see the
+   * two do not match.
+   */
+  const rogueGate = generateKeyPair('gate');
+  const rogueOffer = JSON.parse(
+    JSON.stringify(
+      signPayload(
+        {
+          ...(JSON.parse(JSON.stringify({ ...wire, signature: undefined })) as JsonObject),
+          offer_id: 'off_rogue',
+          offered_total_inr: 1996,
+          depth_pct: 60,
+          lines: [
+            { sku: 'SKU-KETTLE-1L', quantity: 1, list_unit_price_inr: 4990, offered_unit_price_inr: 1996 },
+          ],
+        },
+        rogueGate,
+        DEMO_NOW,
+      ),
+    ),
+  ) as JsonObject;
+
+  const rogueSigned = verifySigned(rogueOffer, publicKeyRef(rogueGate));
+  gate(`a 60%-off offer, signed by some gate  SIGNATURE ${rogueSigned.ok ? 'VALID' : 'INVALID'}`);
+  check('the rogue offer really is validly signed', rogueSigned.ok);
+
+  const rogueVerdict = asBuyer(rogueOffer);
+  gate(`the same offer, checked against the envelope   ${rogueVerdict.ok ? 'ACCEPTED' : `REJECTED (${rogueVerdict.failed})`}`);
+  check('the buyer rejects a gate the merchant never delegated to', !rogueVerdict.ok);
+  check(
+    'and rejects it for the right reason',
+    !rogueVerdict.ok && rogueVerdict.failed === 'gate_is_delegated',
+  );
+
+  /**
+   * And the merchant's own gate exceeding the merchant's own published limits —
+   * the shape the damage takes when a selling agent is compromised. Signed by
+   * the right key, under the right envelope, and still not permitted.
+   */
+  const overreach = JSON.parse(
+    JSON.stringify(
+      signPayload(
+        {
+          ...(JSON.parse(JSON.stringify({ ...wire, signature: undefined })) as JsonObject),
+          offer_id: 'off_overreach',
+          offered_total_inr: 3493,
+          depth_pct: 30,
+          lines: [
+            { sku: 'SKU-KETTLE-1L', quantity: 1, list_unit_price_inr: 4990, offered_unit_price_inr: 3493 },
+          ],
+        },
+        gateKey,
+        DEMO_NOW,
+      ),
+    ),
+  ) as JsonObject;
+
+  const overreachVerdict = asBuyer(overreach);
+  gate(`30% off from the real gate            ${overreachVerdict.ok ? 'ACCEPTED' : `REJECTED (${overreachVerdict.failed})`}`);
+  check(
+    'the buyer catches the merchant’s own gate exceeding its published ceiling',
+    !overreachVerdict.ok && overreachVerdict.failed === 'within_published_authority',
+  );
+
   gate(`audit chain over ${s.ledger.rows.length} row(s)   ${verifyChain(s.ledger.rows).ok ? 'INTACT' : 'BROKEN'}`);
   check('the audit chain verifies', verifyChain(s.ledger.rows).ok);
 
@@ -409,8 +524,9 @@ async function scenarioFour(): Promise<void> {
   console.log(`\n  Artifacts written to ${ARTIFACTS}/ — check them yourself:`);
   console.log('    pnpm cli verify demo-artifacts/offer.json --envelope demo-artifacts/mandate.json \\');
   console.log('        --merchant-key demo-artifacts/merchant.public.pem');
-  console.log('    pnpm cli verify demo-artifacts/offer.tampered.json --envelope demo-artifacts/mandate.json');
-  console.log('    pnpm cli audit demo-artifacts/ledger.json');
+  console.log('    pnpm cli verify demo-artifacts/offer.tampered.json --envelope demo-artifacts/mandate.json \\');
+  console.log('        --merchant-key demo-artifacts/merchant.public.pem');
+  console.log('    pnpm cli audit demo-artifacts/ledger.json --revenue');
 }
 
 // ---------------------------------------------------------------------------
@@ -440,6 +556,50 @@ export type ScenarioName = keyof typeof SCENARIOS;
  * of the demo is a second thing to keep correct, and the one a judge runs is
  * precisely the one that must not have drifted.
  */
+/**
+ * What the envelope was worth, in rupees.
+ *
+ * The track asks for revenue growth, and everything above this line answers a
+ * different question — whether the agent stayed inside its authority. This is
+ * the answer to the first one, and it is deliberately the last thing printed,
+ * because it is the only number here a merchant would actually act on.
+ *
+ * The comparison is against a flat 15% cap: the same ceiling this envelope
+ * grants, minus any ability to notice who is asking. That is what everyone else
+ * ships, and it is the thing worth beating.
+ *
+ * Runs over the audit rows the scenarios just wrote — not over a separate model
+ * of them. If the ledger is wrong the number is wrong, which is the correct
+ * coupling.
+ */
+function reportRevenue(names: readonly ScenarioName[]): void {
+  const rows: AuditRow[] = sessions.flatMap((s) => [...s.ledger.rows]);
+  const result = counterfactual(rows);
+  if (result.lines.length === 0) return;
+
+  console.log(`\n${BAR}\nWHAT IT EARNED\n${BAR}\n`);
+  console.log(formatCounterfactual(result));
+
+  console.log('\n  Read the deals, not just the total.');
+  console.log('\n  Three of the five priced identically under both policies. That is the half');
+  console.log('  of the argument nobody makes: the envelope is not stingier, and an honest');
+  console.log('  buyer cannot tell it is there. A merchant loses nothing by running it.');
+  console.log('\n  The whole difference is two rows, and they diverge for different reasons:');
+  console.log('    buyer_s2   the injector. A flat cap has no idea it is being played, so it');
+  console.log('               grants its full 15%. The collapsed envelope holds list price.');
+  console.log('    buyer_s3b  the morning campaign already spent the budget. A flat cap has');
+  console.log('               no such notion and would have signed 12% anyway.');
+  console.log('\n  Neither is a discount the merchant would have wanted to give.');
+
+  if (names.length < Object.keys(SCENARIOS).length) {
+    console.log('\n  (Partial run — this totals only the scenarios that were requested.)');
+  }
+
+  console.log('\n  Recompute it yourself, from the ledger rather than from this process:');
+  console.log('    pnpm cli audit demo-artifacts/ledger.json --revenue');
+  console.log('    pnpm cli audit data/console.db --revenue --cap 15\n');
+}
+
 export async function runScenarios(names: readonly ScenarioName[]): Promise<number> {
   console.log(`\nCounterparty — ${DEMO_MERCHANT}`);
   console.log('Deterministic run: fixed keys, fixed clock, scripted model turns.');
@@ -448,6 +608,8 @@ export async function runScenarios(names: readonly ScenarioName[]): Promise<numb
   for (const name of names) {
     await SCENARIOS[name].run();
   }
+
+  reportRevenue(names);
 
   console.log(`\n${BAR}`);
   console.log(failures === 0 ? 'All scenario checks passed.' : `${failures} scenario check(s) FAILED.`);

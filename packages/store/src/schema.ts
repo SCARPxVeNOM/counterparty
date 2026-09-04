@@ -40,6 +40,8 @@ CREATE TABLE IF NOT EXISTS audit_rows (
   amount_inr           REAL,
   list_inr             REAL,
   depth_pct            REAL,
+  proposed_depth_pct   REAL,
+  ceiling_pct          REAL,
   settlement_path      TEXT,
   post_auth_reason     TEXT,
   rails                TEXT,
@@ -100,6 +102,8 @@ export const COLUMNS = [
   'amount_inr',
   'list_inr',
   'depth_pct',
+  'proposed_depth_pct',
+  'ceiling_pct',
   'settlement_path',
   'post_auth_reason',
   'rails',
@@ -112,3 +116,22 @@ export const COLUMNS = [
 export const INSERT_SQL = `INSERT INTO audit_rows (${COLUMNS.join(', ')}) VALUES (${COLUMNS.map(
   (column) => `@${column}`,
 ).join(', ')})`;
+
+/**
+ * Columns added after ledgers existed in the wild.
+ *
+ * `CREATE TABLE IF NOT EXISTS` does nothing to a table that is already there, so
+ * a new column has to be added explicitly or every existing ledger fails on the
+ * next insert. `ALTER TABLE ADD COLUMN` gives existing rows NULL, which
+ * `fromColumns` reads back as *absent* — so their canonical JSON is byte-identical
+ * to what it was, their hashes are unchanged, and the chain still verifies across
+ * the migration. That property is why every added column has to be nullable and
+ * optional: a column with a default would rewrite history to add a field that was
+ * never signed.
+ *
+ * There is a test that verifies a chain written before the column existed.
+ */
+export const ADDED_COLUMNS: ReadonlyArray<{ name: string; ddl: string }> = [
+  { name: 'proposed_depth_pct', ddl: 'ALTER TABLE audit_rows ADD COLUMN proposed_depth_pct REAL' },
+  { name: 'ceiling_pct', ddl: 'ALTER TABLE audit_rows ADD COLUMN ceiling_pct REAL' },
+];

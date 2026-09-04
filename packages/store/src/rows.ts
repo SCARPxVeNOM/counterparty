@@ -34,6 +34,8 @@ export interface StoredRow {
   readonly amount_inr: number | null;
   readonly list_inr: number | null;
   readonly depth_pct: number | null;
+  readonly proposed_depth_pct: number | null;
+  readonly ceiling_pct: number | null;
   readonly settlement_path: string | null;
   readonly post_auth_reason: string | null;
   readonly rails: string | null;
@@ -68,6 +70,8 @@ export function toColumns(row: AuditRow): Record<string, string | number | null>
     amount_inr: orNull(row.amount_inr),
     list_inr: orNull(row.list_inr),
     depth_pct: orNull(row.depth_pct),
+    proposed_depth_pct: orNull(row.proposed_depth_pct),
+    ceiling_pct: orNull(row.ceiling_pct),
     settlement_path: orNull(row.settlement_path),
     post_auth_reason: orNull(row.post_auth_reason),
     rails: row.rails === undefined ? null : JSON.stringify(row.rails),
@@ -99,6 +103,12 @@ export function fromColumns(stored: StoredRow): AuditRow {
     ...(stored.amount_inr === null ? {} : { amount_inr: stored.amount_inr }),
     ...(stored.list_inr === null ? {} : { list_inr: stored.list_inr }),
     ...(stored.depth_pct === null ? {} : { depth_pct: stored.depth_pct }),
+    // Absent on every row written before this column existed, and absent is
+    // exactly what it must come back as — see ADDED_COLUMNS in schema.ts.
+    ...(stored.proposed_depth_pct === null
+      ? {}
+      : { proposed_depth_pct: stored.proposed_depth_pct }),
+    ...(stored.ceiling_pct === null ? {} : { ceiling_pct: stored.ceiling_pct }),
     ...(stored.settlement_path === null
       ? {}
       : { settlement_path: stored.settlement_path as SettlementPath }),

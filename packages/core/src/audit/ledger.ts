@@ -73,6 +73,27 @@ export interface AuditEntry {
   readonly amount_inr?: number;
   readonly list_inr?: number;
   readonly depth_pct?: number;
+  /**
+   * What the agent proposed, before the gate ruled on it.
+   *
+   * Distinct from `depth_pct`, which is what was granted. A turn where the two
+   * differ is a turn where the envelope changed the price, and the pair is what
+   * makes that visible in the row rather than inferable from the absence of one.
+   */
+  readonly proposed_depth_pct?: number;
+  /**
+   * The discount ceiling in force when the agent was asked to propose.
+   *
+   * The field that makes the two numbers above mean anything. An agent facing a
+   * collapsed envelope proposes 0% — not because it wanted to hold list price,
+   * but because 0% was the most it was permitted to say. Without the ceiling
+   * recorded alongside, that row is indistinguishable from a buyer who never
+   * asked for a discount, and any comparison against a looser policy would
+   * silently conclude the two behaved identically.
+   *
+   * See `counterfactual.ts`, which exists entirely to make that distinction.
+   */
+  readonly ceiling_pct?: number;
   readonly settlement_path?: SettlementPath;
   readonly post_auth_reason?: PostAuthReason;
   /** Razorpay object ids, when the action touched the rails. */

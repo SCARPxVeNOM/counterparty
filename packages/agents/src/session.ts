@@ -177,8 +177,19 @@ export class Session {
       ...(this.lastRefusal === undefined ? {} : { lastRefusal: this.lastRefusal }),
     });
 
+    /**
+     * What the agent asked for before the gate touched it.
+     *
+     * Captured here rather than read off `agentTurn` at record time, because the
+     * retry below reassigns `agentTurn` to a second, lower proposal. Recording
+     * that one would report the number the gate dictated as the number the agent
+     * wanted, which is precisely backwards — and it is the difference between
+     * the two that says whether the envelope changed the outcome.
+     */
+    const firstProposedPct = agentTurn.proposal?.requestedDepthPct;
+
     // --- 5. gate ------------------------------------------------------------
-    let outcome = await this.putToGate(agentTurn, turn, at);
+    let outcome = await this.putToGate(agentTurn, turn, at, ceilingPct, firstProposedPct);
 
     /**
      * One retry when the gate offered a counter.
@@ -201,7 +212,14 @@ export class Session {
         lastRefusal: outcome.refusal,
         merchantName: this.options.merchantName,
       });
-      outcome = await this.putToGate(agentTurn, turn, at, `${this.offerId(turn)}_r`);
+      outcome = await this.putToGate(
+        agentTurn,
+        turn,
+        at,
+        ceilingPct,
+        firstProposedPct,
+        `${this.offerId(turn)}_r`,
+      );
     }
 
     this.lastRefusal = outcome.refusal;
@@ -234,6 +252,8 @@ export class Session {
     agentTurn: SellingAgentTurn,
     turn: number,
     at: Date,
+    ceilingPct: number,
+    proposedPct: number | undefined,
     offerId?: string,
   ): Promise<{ offer?: SignedOffer; refusal?: Refusal }> {
     if (agentTurn.proposal === undefined) return {};
@@ -257,6 +277,8 @@ export class Session {
         outcome: 'refused',
         authorized_by: decision.refusal.clause,
         agent_rationale: agentTurn.rationale || 'no rationale supplied',
+        ceiling_pct: ceilingPct,
+        ...(proposedPct === undefined ? {} : { proposed_depth_pct: proposedPct }),
         ...(decision.refusal.counter === undefined
           ? {}
           : { depth_pct: decision.refusal.counter.depthPct }),
@@ -281,6 +303,8 @@ export class Session {
       amount_inr: offer.offered_total_inr,
       list_inr: offer.list_total_inr,
       depth_pct: offer.depth_pct,
+      ceiling_pct: ceilingPct,
+      ...(proposedPct === undefined ? {} : { proposed_depth_pct: proposedPct }),
       settlement_path: offer.settlement_path,
       signature: offer.signature.sig,
     });

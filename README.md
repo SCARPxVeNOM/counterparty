@@ -52,7 +52,7 @@ matter, because saying is not committing.
 ```bash
 pnpm install
 pnpm demo          # four scenarios, headless, deterministic — no keys needed
-pnpm test          # 412 tests, no network, no model calls
+pnpm test          # 462 tests, no network, no model calls
 pnpm typecheck     # the compiler is part of the enforcement — see below
 pnpm dev           # the console at http://localhost:3939
 ```
@@ -76,12 +76,21 @@ pnpm cli verify demo-artifacts/offer.json \
     --envelope demo-artifacts/mandate.json \
     --merchant-key demo-artifacts/merchant.public.pem
 
-pnpm cli verify demo-artifacts/offer.tampered.json --envelope demo-artifacts/mandate.json
-pnpm cli audit  demo-artifacts/ledger.json
+pnpm cli verify demo-artifacts/offer.tampered.json \
+    --envelope demo-artifacts/mandate.json \
+    --merchant-key demo-artifacts/merchant.public.pem
+
+pnpm cli audit  demo-artifacts/ledger.json --revenue
 pnpm cli envelope demo-artifacts/mandate.json --merchant-key demo-artifacts/merchant.public.pem
 ```
 
 The tampered file differs from the real one by **one rupee**.
+
+`verify` requires the merchant key and will not run without it. Checking an
+offer against an envelope you cannot verify the signature of proves only that
+whoever wrote one also wrote the other, which is a property any forger arranges
+for free. There is no honest reduced version of that check, so there is no
+reduced version.
 
 `counterparty replay <scenario>` runs a single beat rather than all four. It
 calls the same functions `pnpm demo` calls — a single-scenario replay that was a
@@ -250,20 +259,146 @@ injector** in the console.
 
 ---
 
+## The check on the other side of the table
+
+Everything above is the merchant verifying the merchant. The rails refuse to
+execute an offer whose gate signature does not verify, which is worth having and
+is not a counterparty check: it is a merchant checking a key the merchant
+already trusts.
+
+`verifyAsCounterparty` is the check the **buyer's** agent runs, and it holds
+three things and nothing else — the offer as JSON, the envelope as JSON, and the
+merchant's public key from a directory. No private material, no access to the
+gate, no shared process. It is what `pnpm cli verify` runs, what the console
+panel renders, and what a buyer would implement from the spec.
+
+```
+merchant key ──signs──▶ envelope ──delegates──▶ gate key ──signs──▶ offer
+```
+
+Ten checks, stopping at the first failure, because a signature check on a
+document that did not parse is not a failing check but a meaningless one:
+
+| | check | what it rules out |
+|---|---|---|
+| 1 | `envelope_wellformed` | a document that is not a selling mandate |
+| 2 | `envelope_signature` | an envelope this merchant never issued — **including one whose ceiling was raised after issuing** |
+| 3 | `envelope_in_force` | authority that had expired or had not started |
+| 4 | `offer_wellformed` | a proposal wearing an offer's clothes |
+| 5 | `offer_names_envelope` | an offer borrowing a different merchant's authority |
+| 6 | `gate_is_delegated` | **a gate this merchant never delegated to** |
+| 7 | `offer_signature` | an offer edited after signing |
+| 8 | `offer_unexpired` | a quote acted on after it lapsed |
+| 9 | `arithmetic_consistent` | a stated depth that its own totals contradict |
+| 10 | `within_published_authority` | **the merchant's own gate exceeding the merchant's own published limits** |
+
+The three in bold are the ones only a counterparty can make.
+
+**Six is the one that matters.** A gate signature on its own proves that *some*
+gate approved a price, which was never in doubt. It becomes evidence only
+because the envelope — signed by the merchant, naming one specific gate key —
+says the merchant delegated to that gate and bounded what it could do. Scenario 4
+signs a 60%-off offer with a freshly generated key, confirms the signature is
+genuinely valid, and then watches the buyer reject it anyway. A verifier that
+asked only *"is this signed?"* would take the discount, and that verifier is what
+most integrations end up shipping, because a signature that checks out feels like
+an answer.
+
+**Ten is what the whole project is for.** An offer correctly signed by the right
+gate under the right envelope, granting 30% against a published 15% ceiling — the
+exact shape the damage takes when a selling agent is compromised — is visible
+from the outside, by anyone holding three public inputs.
+
+What it deliberately does *not* check: floor margin needs unit costs, and the
+daily budget needs every other offer issued today. Neither is public, and neither
+should be. Claiming to check them would be the more impressive verifier and the
+less honest one.
+
+What it does not prove: nothing stops a merchant publishing a 90% ceiling and
+honouring a 90% discount. That is not tampering, it is generosity, and no
+signature scheme should try to prevent it. What the buyer gets is narrower and
+more useful — whatever the merchant published, this offer is inside it, and the
+merchant cannot afterwards claim its agent went rogue, because the merchant
+signed the limits the agent stayed inside.
+
+---
+
+## What the envelope earned
+
+The track asks for an agent that **grows the merchant's revenue**. Everything
+above answers a different question — whether the agent stayed inside its
+authority — and the honest answer to the first one is a number rather than an
+argument.
+
+The alternative to a signed envelope is not "no policy". It is the thing everyone
+ships: a **static cap**. Allow up to N% off, refuse beyond it, log the result.
+That is the baseline worth beating.
+
+```bash
+pnpm demo                                        # prints it at the end
+pnpm cli audit demo-artifacts/ledger.json --revenue
+pnpm cli audit data/console.db --revenue --cap 15
+```
+
+From a demo run:
+
+```
+  buyer                 list   ceiling   cap gave   envelope gave        Δ
+  ----------------------------------------------------------------------------
+  buyer_s1               ₹14,970     15%   ₹13,174 @12%   ₹13,174 @12%         —
+  buyer_s3a              ₹14,970     15%   ₹13,174 @12%   ₹13,174 @12%         —
+  buyer_s4                ₹4,990     15%    ₹4,491 @10%    ₹4,491 @10%         —
+  buyer_s3b              ₹14,970     15%   ₹13,174 @12%    ₹14,371 @4%   +₹1,198
+  buyer_s2                ₹4,990      0%    ₹4,242 @15%     ₹4,990 @0%     +₹749
+  ----------------------------------------------------------------------------
+  total                  ₹54,890                ₹48,253        ₹50,199   +₹1,946
+```
+
+**Read the deals, not the total.** Three of five priced identically under both
+policies — the half of the argument nobody makes: the envelope is not stingier,
+an honest buyer cannot tell it is there, and a merchant loses nothing by running
+it. The difference is two rows, and they diverge for different reasons: `s2` is
+the injector, which a flat cap would have handed its full 15% because a flat cap
+cannot tell who is asking; `s3b` follows a campaign that had already spent the
+budget, which a flat cap has no notion of. Neither is a discount the merchant
+would have wanted to give.
+
+It is computed from the audit rows and nothing else, so anyone holding the ledger
+can recompute it without trusting the code that wrote it — which is why the CLI
+reads it from the file rather than from a running process.
+
+**The load-bearing assumption, stated plainly.** Where the envelope's ceiling
+bound the outcome, this credits the flat cap with granting its own full ceiling.
+That is an assumption about a run that never happened. The recorded injector
+transcript does close at list price, which is the evidence for it, but it is one
+transcript and not a market. The comparison also assumes both policies close the
+sale: if the injector would have walked rather than pay list, the envelope earned
+nothing rather than more.
+
+**A first version of this printed ₹0**, because it compared what the agent
+proposed against the cap — and after a collapse the agent proposes 0%, which is
+indistinguishable from a buyer who never asked. The ledger now records the
+*ceiling in force* alongside the proposal, which is the only way to tell a
+constrained agent from an undemanding buyer. See
+[`docs/CORRECTIONS.md`](docs/CORRECTIONS.md) C12.
+
+---
+
 ## Layout
 
 ```
 packages/
   core/       pure domain, zero I/O — crypto, money, mandate, gate,
-              pressure, budget, audit, catalog. 265 tests, no model calls.
+              pressure, budget, audit, counterparty, catalog.
+              311 tests, no model calls.
   rails/      Razorpay adapter. Accepts only SignedOffer.        32 tests
   llm/        provider interface, Gemini, retry and model
-              fallback, cassette replay, pressure classifier     20 tests
+              fallback, cassette replay, pressure classifier     23 tests
   agents/     selling agent, buyer personas, the session         35 tests
   extract/    two readers — storefront markup and Razorpay
               Payment Page JSON — plus source-derived confidence 32 tests
   store/      SQLite for the audit ledger; append-only at the
-              database level                                     15 tests
+              database level                                     19 tests
   demo/       fixed keys, fixed clock, model-free selling agent
   config/     model routing and env, in one place
 apps/
@@ -439,7 +574,7 @@ refund and being allowed to make one are different things.
 | Requirement | Where |
 |---|---|
 | Build an agent | `packages/agents` — reasoning under adversarial pressure |
-| Grows merchant revenue on test-mode APIs | bundles, conceded-but-profitable closes, campaigns on a shared budget |
+| Grows merchant revenue on test-mode APIs | bundles, conceded-but-profitable closes, campaigns on a shared budget — and **+₹1,946 (+4.03%) against a flat cap**, computed from the ledger by `pnpm cli audit --revenue` |
 | Merchant transactable by an AI buyer end to end | extracted catalog → signed offer → order → authorize → capture, **completed with a real card** |
 | Conversational in-app checkout | the negotiation *is* the checkout |
 | Agent-readable catalog | ACP/UCP shape + AOCF terms + `upi-uap`, built by `/onboard` from a real Razorpay page |
@@ -449,7 +584,7 @@ refund and being allowed to make one are different things.
 | WHY NOW — ACP / AP2 / x402 | AP2's proven reasoning-layer gap is the thesis |
 | Every money action explainable | audit row cites the binding clause by name |
 | Bounded | envelope: floor margin, depth, budgets, windows |
-| Gated | deterministic signer; unsigned ≠ binding, enforced by the compiler |
+| Gated | deterministic signer; unsigned ≠ binding, enforced by the compiler, re-checked at the rails, and **checkable by the buyer** via `verifyAsCounterparty` |
 | Show the audit trail | hash-chained, tamper-evident, independently verifiable |
 | One failure handled gracefully | injection → collapse → the sale still completes |
 
@@ -611,6 +746,40 @@ honest.
   `active`, and a freshly created one sits at `created` until a customer
   authorizes the mandate — another human card tap. The calls are implemented and
   stub-tested.
+
+- **The buyer now checks, and it did not before.** For most of this build the
+  only things that ever verified a signature were the CLI, the tests, the issuer
+  checking its own work, and the merchant's own rails. All four are the merchant
+  verifying the merchant. A project named for the party that verifies had no such
+  party in it, and §5.1's *"the buyer agent can verify the signature"* was a
+  property of the format rather than of the system.
+  `verifyAsCounterparty` closes it, and the demo now rejects a validly signed
+  offer from an undelegated gate and a correctly signed offer that exceeds the
+  published ceiling. See [`docs/CORRECTIONS.md`](docs/CORRECTIONS.md) C11.
+
+- **There is a revenue number now, and the first one was wrong.** It printed ₹0
+  across the whole demo, because it compared what the agent proposed against a
+  flat cap — and a collapsed agent proposes 0%, which is indistinguishable from a
+  buyer who never asked. The ledger records the ceiling in force alongside the
+  proposal, and the figure is **+₹1,946 (+4.03%)** over four scenarios, with
+  three of five deals pricing identically under both policies. C12 has the full
+  account, including the assumption it rests on.
+
+- **The extractor uses no model, and §6 says it does.** The design note describes
+  onboarding as `Crawl + LLM extract`. `packages/extract` depends on
+  `@counterparty/core` and nothing else; extraction is regex over class names and
+  the JSON payload a Razorpay Payment Page embeds. C8 records why the scraper
+  changed shape but never recorded that the model step was dropped. The position
+  is defensible — for a structured JSON payload a model adds latency and a
+  hallucination surface and reads nothing a parser cannot — but it is a
+  divergence from the design note, and it is stated here rather than implied.
+
+- **The buyer turns in the recorded cassettes are scripted.** The 38 recordings
+  are real Gemini output for the *seller*; the buyer messages come from
+  `CONSOLE_FOLLOW_UPS`, a fixed list. `BuyerAgent` can drive turns through the
+  model and did not drive these. Free-typing in the console is genuinely live and
+  hits Gemini — that is the answer to "what if I type something unscripted" — but
+  the artifact committed to the repo has a scripted attacker in it.
 
 - **The full refund has not been fired at live money.** Deliberately. It is the
   same `rails.refund` call as the partial one, which *has* run for real

@@ -6,3 +6,4 @@ export * from './catalog/index';
 export * from './budget/index';
 export * from './gate/index';
 export * from './audit/index';
+export * from './counterparty/index';

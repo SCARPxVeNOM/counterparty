@@ -17,18 +17,19 @@
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import {
+  counterfactual,
+  formatCounterfactual,
   formatInr,
   formatRow,
   kidFromPublicKeyPem,
   generateKeyPair,
   rupeesToPaise,
+  verifyAsCounterparty,
   verifyChain,
   verifyMandate,
-  verifySigned,
   type AuditRow,
   type JsonObject,
   type PublicKeyRef,
-  type SellingMandate,
 } from '@counterparty/core';
 import {
   FIXTURES,
@@ -66,16 +67,23 @@ function flag(name: string): string | undefined {
 // ---------------------------------------------------------------------------
 
 /**
- * Verify a signed offer.
+ * Verify a signed offer, as the counterparty.
  *
- * With an envelope, this runs the full chain a buyer's agent should run:
- * merchant signature over the envelope, envelope validity window, gate
- * signature over the offer checked against the key the ENVELOPE names, and the
- * offer's own terms re-checked against the clause it cites.
+ * The checking itself is `verifyAsCounterparty` in core — the same function a
+ * buyer's agent calls before it agrees to pay. This command is a terminal around
+ * it and deliberately nothing more. An independent verifier that reimplements
+ * its own checks is two verifiers, and the day they disagree is the day nobody
+ * knows which was right.
  *
- * Without an envelope it can only confirm internal consistency, and says so.
- * A gate signature alone proves a gate approved something, never that any
- * merchant authorized that gate.
+ * Three inputs, and the third is not optional in spirit:
+ *
+ *   the offer       what the merchant's agent sent
+ *   --envelope      the authority it claims to act under
+ *   --merchant-key  the merchant's public key, FROM SOMEWHERE ELSE
+ *
+ * Without the third, this can still tell you the documents agree with each
+ * other — which a forger would also arrange. It says so rather than implying a
+ * check it did not perform.
  */
 function verifyOffer(offerPath: string, envelopePath?: string): void {
   const offer = readJson(offerPath);
@@ -87,8 +95,6 @@ function verifyOffer(offerPath: string, envelopePath?: string): void {
     process.exit(1);
   }
 
-  let passed = true;
-
   if (envelopePath === undefined) {
     console.log('  No envelope supplied. Checking internal consistency only.\n');
     console.log(`  signed by gate ${String(signature['kid'])} at ${String(signature['signed_at'])}`);
@@ -99,93 +105,80 @@ function verifyOffer(offerPath: string, envelopePath?: string): void {
     process.exit(0);
   }
 
-  const envelope = readJson(envelopePath) as unknown as SellingMandate;
+  const envelope = readJson(envelopePath);
 
+  /**
+   * `--as-of` exists because the demo runs on a fixed clock, so its offers are
+   * always in the past by the time anyone checks them.
+   */
+  const asOfFlag = flag('as-of');
+  const now = asOfFlag === undefined ? new Date() : new Date(Date.parse(asOfFlag));
+
+  /**
+   * The merchant key is required, not optional.
+   *
+   * An earlier version of this command made it a flag and printed `SKIP` when it
+   * was missing, which quietly turned a counterparty check into "these two
+   * documents agree with each other" — a property any forger can arrange by
+   * supplying both. There is no honest reduced version of this check, so there
+   * is no reduced version.
+   */
   const merchantKeyPath = flag('merchant-key');
-  if (merchantKeyPath !== undefined) {
-    const pem = readFileSync(merchantKeyPath, 'utf8');
-    const merchantRef: PublicKeyRef = { role: 'merchant', kid: kidFromPublicKeyPem(pem), publicKeyPem: pem };
-    const check = verifyMandate(envelope, merchantRef, new Date(String(signature['signed_at'])));
-    passed = line(
-      check.ok,
-      'the merchant signed this envelope',
-      check.ok ? `merchant ${merchantRef.kid}` : `${check.reason}: ${check.detail}`,
-    ) && passed;
-  } else {
-    console.log('  SKIP  merchant signature (pass --merchant-key <public.pem> to check it)');
+  if (merchantKeyPath === undefined) {
+    console.error('  --merchant-key <public.pem> is required.\n');
+    console.error('  Verifying an offer against an envelope you cannot check the signature of');
+    console.error('  proves only that whoever wrote one also wrote the other. The merchant key');
+    console.error('  has to come from somewhere the sender does not control — a key directory,');
+    console.error('  a prior relationship, `pnpm cli keys`. That is what anchors the chain.\n');
+    process.exit(2);
   }
 
-  // The anchor: the offer must be signed by the key the envelope delegates to.
-  const gateRef: PublicKeyRef = {
-    role: 'gate',
-    kid: envelope.gate_key.kid,
-    publicKeyPem: envelope.gate_key.public_key_pem,
+  const pem = readFileSync(merchantKeyPath, 'utf8');
+  const merchantPublicKey: PublicKeyRef = {
+    role: 'merchant',
+    kid: kidFromPublicKeyPem(pem),
+    publicKeyPem: pem,
   };
-  const gateCheck = verifySigned(offer, gateRef);
-  passed = line(
-    gateCheck.ok,
-    'the offer was signed by the gate this envelope delegates to',
-    gateCheck.ok ? `gate ${gateRef.kid}` : `${gateCheck.reason}: ${gateCheck.detail}`,
-  ) && passed;
 
-  passed = line(
-    offer['envelope_id'] === envelope.envelope_id,
-    'the offer cites this envelope',
-    `offer cites ${String(offer['envelope_id'])}, envelope is ${envelope.envelope_id}`,
-  ) && passed;
+  const verdict = verifyAsCounterparty({ offer, envelope, merchantPublicKey, now });
 
-  // Re-check the commercial terms independently rather than trusting the offer.
-  const depth = Number(offer['depth_pct'] ?? 0);
-  const clause = String(offer['authorized_by'] ?? '');
-  const ceiling =
-    clause === 'authority.bundle_rules.combined_depth_pct'
-      ? envelope.authority.bundle_rules.combined_depth_pct
-      : envelope.authority.max_discount_depth_pct;
-  passed = line(
-    depth <= ceiling + 1e-9,
-    'the discount is within what the envelope permits',
-    `depth ${depth}% against a ${ceiling}% ceiling, cited clause ${clause}`,
-  ) && passed;
-
-  const listTotal = Number(offer['list_total_inr'] ?? 0);
-  const offeredTotal = Number(offer['offered_total_inr'] ?? 0);
-  const impliedDepth = listTotal === 0 ? 0 : ((listTotal - offeredTotal) / listTotal) * 100;
-  passed = line(
-    Math.abs(impliedDepth - depth) < 0.05,
-    'the stated depth matches the stated prices',
-    `${formatInr(rupeesToPaise(offeredTotal))} of ${formatInr(rupeesToPaise(listTotal))} is ${impliedDepth.toFixed(2)}%`,
-  ) && passed;
+  for (const check of verdict.checks) {
+    line(check.ok, check.check.replace(/_/g, ' '), check.detail);
+  }
 
   /**
    * Expiry is reported, not asserted.
    *
    * An expired offer is still a genuine record of what the merchant authorized
    * at the time — which is exactly what an auditor reading it six months later
-   * needs. It is simply no longer something a buyer can act on. Conflating
-   * "was never valid" with "is no longer live" would make the tool useless for
-   * the case it is most needed in.
-   *
-   * `--as-of` exists because the demo runs on a fixed clock, so its offers are
-   * always in the past by the time anyone checks them.
+   * needs. It is simply no longer something a buyer can act on. Conflating "was
+   * never valid" with "is no longer live" would make the tool useless for the
+   * case it is most needed in, so a chain that fails only on a validity window,
+   * with no `--as-of` given, exits zero with an explanation.
    */
-  const asOfFlag = flag('as-of');
-  const asOf = asOfFlag === undefined ? Date.now() : Date.parse(asOfFlag);
-  const expiresAt = Date.parse(String(offer['expires_at'] ?? ''));
-  if (Number.isFinite(expiresAt)) {
-    const live = expiresAt > asOf;
-    console.log(
-      `  ${live ? 'LIVE' : 'PAST'}  the offer ${live ? 'is still open' : 'has expired'} ` +
-        `(${String(offer['expires_at'])})${asOfFlag === undefined ? '' : ` as of ${asOfFlag}`}`,
-    );
-    if (!live && asOfFlag === undefined) {
-      console.log('        Expiry does not invalidate the signature — this is still a true record');
-      console.log('        of what was authorized. Pass --as-of <iso> to check it at its own moment.');
-    }
+  const onlyExpired =
+    !verdict.ok && (verdict.failed === 'offer_unexpired' || verdict.failed === 'envelope_in_force');
+
+  if (onlyExpired && asOfFlag === undefined) {
+    console.log('\n  PAST  every check up to this point passed; the document has simply aged out.');
+    console.log('        Expiry does not invalidate a signature — this is still a true record of');
+    console.log('        what was authorized. Pass --as-of <iso> to check it at its own moment.\n');
+    process.exit(0);
   }
 
-  console.log(`\n${passed ? 'This offer is binding on the merchant.' : 'This offer is NOT valid. Do not rely on it.'}\n`);
-  process.exit(passed ? 0 : 1);
+  if (verdict.ok) {
+    console.log(
+      `\nThis offer is binding on ${verdict.merchantId}: ` +
+        `${formatInr(rupeesToPaise(verdict.offeredTotalInr))} at ${verdict.depthPct}%, ` +
+        `inside a published ceiling of ${verdict.maxDepthPct}%.\n`,
+    );
+    process.exit(0);
+  }
+
+  console.log(`\nThis offer is NOT valid. Do not rely on it.\n  ${verdict.detail}\n`);
+  process.exit(1);
 }
+
 
 // ---------------------------------------------------------------------------
 
@@ -249,6 +242,20 @@ function auditChain(path: string): void {
 
   if (process.argv.includes('--show')) {
     for (const row of rows) console.log(`${formatRow(row)}\n`);
+  }
+
+  /**
+   * `--revenue` answers the other half of the track.
+   *
+   * The chain says the agent stayed inside its authority. This says what that
+   * was worth against the policy everybody else ships — a flat cap — and it is
+   * computed from these rows alone, so anyone holding the ledger can recompute
+   * it without trusting the code that wrote it.
+   */
+  if (process.argv.includes('--revenue')) {
+    const capFlag = flag('cap');
+    const result = counterfactual(rows, capFlag === undefined ? {} : { capPct: Number(capFlag) });
+    console.log(`${formatCounterfactual(result)}\n`);
   }
 
   const result = verifyChain(rows);
@@ -408,17 +415,19 @@ function usage(): never {
   console.log(`
 counterparty — verify what a selling agent claims
 
-  counterparty verify <offer.json> [--envelope <mandate.json>] [--merchant-key <public.pem>]
-      Check a signed offer. With an envelope, runs the full chain: merchant
-      signature, delegation to the gate, and the offer's terms against the
-      clause it cites.
+  counterparty verify <offer.json> --envelope <mandate.json> --merchant-key <public.pem>
+      Run the counterparty check — the one a buyer's agent runs before it pays.
+      Merchant signature over the envelope, the envelope's delegation to a
+      specific gate, the gate's signature over the offer, and the offer's terms
+      against the limits the merchant published. [--as-of <iso>]
 
   counterparty envelope <mandate.json> --merchant-key <public.pem>
       Check a selling mandate and print the authority it grants.
 
-  counterparty audit <ledger.json|ledger.db> [--show]
+  counterparty audit <ledger.json|ledger.db> [--show] [--revenue] [--cap <pct>]
       Recompute the hash chain over an audit ledger. Reads the JSON that
       pnpm demo writes, or the console's live SQLite ledger (data/console.db).
+      --revenue compares what the envelope earned against a flat discount cap.
 
   counterparty keys [--out <dir>]
       Generate a merchant and a gate keypair.

@@ -871,3 +871,33 @@ button.send:disabled {
 a.badge {
   text-decoration: none;
 }
+
+/* ── the counterparty check ──────────────────────────────────────────────
+ *
+ * Cyan, because this panel is cryptographic proof and nothing else — the
+ * envelope's signature, the delegation, the gate's signature over the offer.
+ * It is the only block in the console rendered from the BUYER's inputs, so it
+ * gets a rule down its edge to say that it is not the merchant marking its own
+ * homework.
+ */
+
+.clauses.counterparty {
+  border-left: 2px solid var(--cyan-dim);
+  background: var(--chassis-sunk);
+}
+
+.readout-label .aside.ok {
+  color: var(--cyan);
+}
+
+.readout-label .aside.alarm {
+  color: var(--oxide);
+}
+
+.clauses .aside.alarm {
+  display: block;
+  margin-top: 8px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--oxide);
+}

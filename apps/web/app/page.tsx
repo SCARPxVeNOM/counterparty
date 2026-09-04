@@ -27,6 +27,12 @@ interface Row {
   rendered: string;
 }
 
+interface CounterpartyCheck {
+  check: string;
+  ok: boolean;
+  detail: string;
+}
+
 interface Offer {
   offer_id: string;
   list_total_inr: number;
@@ -35,6 +41,13 @@ interface Offer {
   authorized_by: string;
   signature: string;
   expires_at: string;
+  /** The buyer's own verdict, run on the serialized offer. */
+  counterparty: {
+    accepted: boolean;
+    failed: string | null;
+    detail: string | null;
+    checks: CounterpartyCheck[];
+  };
 }
 
 interface View {
@@ -72,6 +85,24 @@ interface View {
     head: string | null;
     /** The whole file, across every session: rows this console has ever written. */
     persisted: { rows: number; chainIntact: boolean; detail: string | null };
+  };
+  revenue: {
+    capPct: number;
+    deals: number;
+    divergent: number;
+    envelopeInr: number;
+    staticInr: number;
+    deltaInr: number;
+    upliftPct: number;
+    lines: Array<{
+      buyerId: string;
+      listInr: number;
+      ceilingPct: number;
+      envelopePct: number;
+      staticPct: number;
+      deltaInr: number;
+      clause: string;
+    }>;
   };
   catalog: Array<{ sku: string; listInr: number; marginConfidence: number; lowConfidence: boolean }>;
   personas: Array<{ id: string; label: string; summary: string; adversarial: boolean; opening: string }>;
@@ -455,6 +486,54 @@ export default function Console() {
               <Clause name="gate signature" value={`${lastOffer.signature.slice(0, 18)}…`} />
             </div>
           )}
+
+          {/* ── the buyer's own check ──────────────────────────────────
+              Everything above this line is the merchant checking the
+              merchant. This is the other side of the table: the offer
+              serialized to JSON, the envelope, the merchant's public key,
+              and nothing else. Same function the CLI runs. */}
+          {lastOffer !== undefined && (
+            <div className="clauses counterparty">
+              <div className="readout-label">
+                counterparty check
+                <span className={`aside ${lastOffer.counterparty.accepted ? 'ok' : 'alarm'}`}>
+                  {lastOffer.counterparty.accepted ? 'ACCEPTED' : 'REJECTED'}
+                </span>
+              </div>
+              {lastOffer.counterparty.checks.map((c) => (
+                <Clause
+                  key={c.check}
+                  name={c.check.replace(/_/g, ' ')}
+                  value={c.ok ? 'ok' : 'FAILED'}
+                  void={!c.ok}
+                  title={c.detail}
+                />
+              ))}
+              {lastOffer.counterparty.detail !== null && (
+                <div className="aside alarm">{lastOffer.counterparty.detail}</div>
+              )}
+            </div>
+          )}
+
+          {/* ── what the envelope earned ────────────────────────────────
+              The other half of the track's ask. Computed from the ledger
+              on disk, across every session, against a flat cap. */}
+          {view.revenue.deals > 0 && (
+            <div className="clauses">
+              <div className="readout-label">
+                against a flat {view.revenue.capPct}% cap
+                <span className="aside">{view.revenue.deals} deals on disk</span>
+              </div>
+              <Clause name="a flat cap earns" value={money(view.revenue.staticInr)} />
+              <Clause name="this envelope earned" value={money(view.revenue.envelopeInr)} binding />
+              <Clause
+                name="difference"
+                value={`${view.revenue.deltaInr >= 0 ? '+' : ''}${money(view.revenue.deltaInr)} · ${view.revenue.upliftPct}%`}
+                binding={view.revenue.deltaInr > 0}
+                title={`${view.revenue.divergent} of ${view.revenue.deals} deals priced differently; the rest were identical under both policies`}
+              />
+            </div>
+          )}
         </div>
       </aside>
 
@@ -524,14 +603,20 @@ function Clause({
   value,
   binding,
   void: voided,
+  title,
 }: {
   name: string;
   value: string;
   binding?: boolean;
   void?: boolean;
+  /** Hover text. Defaults to the clause name; a check passes its own reasoning. */
+  title?: string;
 }) {
   return (
-    <div className={`clause-row${binding === true ? ' binding' : ''}${voided === true ? ' void' : ''}`} title={name}>
+    <div
+      className={`clause-row${binding === true ? ' binding' : ''}${voided === true ? ' void' : ''}`}
+      title={title ?? name}
+    >
       <span className="name">{name}</span>
       <span className="value">{value}</span>
     </div>

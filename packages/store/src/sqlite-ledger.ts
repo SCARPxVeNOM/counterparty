@@ -37,6 +37,7 @@ import {
 } from '@counterparty/core';
 import { fromColumns, toColumns, type StoredRow } from './rows';
 import {
+  ADDED_COLUMNS,
   APPEND_ONLY_TRIGGERS,
   DROP_APPEND_ONLY_TRIGGERS,
   INSERT_SQL,
@@ -73,10 +74,30 @@ export class SqliteLedger implements LedgerWriter {
     // difference between a missing row and a corrupt file.
     this.db.pragma('journal_mode = WAL');
     this.db.exec(SCHEMA);
+    this.migrate();
     if (options.withoutAppendOnlyGuard !== true) this.db.exec(APPEND_ONLY_TRIGGERS);
 
     this.insert = this.db.prepare(INSERT_SQL);
     this.state = this.load();
+  }
+
+  /**
+   * Add columns that did not exist when this file was written.
+   *
+   * Runs before the triggers go on, because `ALTER TABLE` on a table carrying an
+   * append-only UPDATE trigger is fine but the ordering is easier to reason
+   * about this way. Adding a column does not touch a single existing row, which
+   * is the only reason this is safe to do to an audit ledger at all.
+   */
+  private migrate(): void {
+    const present = new Set(
+      (this.db.prepare('PRAGMA table_info(audit_rows)').all() as Array<{ name: string }>).map(
+        (column) => column.name,
+      ),
+    );
+    for (const column of ADDED_COLUMNS) {
+      if (!present.has(column.name)) this.db.exec(column.ddl);
+    }
   }
 
   private load(): AuditLedger {
