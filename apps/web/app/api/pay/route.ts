@@ -155,7 +155,9 @@ export async function POST(request: Request) {
       outcome: 'executed',
       authorized_by: 'authority.capture_window_hours',
       clause_value: demoMandate().authority.capture_window_hours,
-      agent_rationale: `buyer authorized ${offer.offer_id} at the signed price`,
+      agent_rationale:
+        `buyer authorized ${offer.offer_id} at the signed price` +
+        (payment.simulated ? ' (simulated cardholder — no payment reached Razorpay)' : ''),
       offer_id: offer.offer_id,
       buyer_id: offer.buyer_id,
       amount_inr: offer.offered_total_inr,
@@ -172,7 +174,18 @@ export async function POST(request: Request) {
       outcome: 'executed',
       authorized_by: 'authority.max_discount_depth_pct',
       clause_value: demoMandate().authority.max_discount_depth_pct,
-      agent_rationale: `captured the full authorized amount on ${payment.id}`,
+      /**
+       * Say when nothing executed.
+       *
+       * `captureFull` short-circuits on a simulated payment and never calls
+       * `/payments/:id/capture`, so the order stays at `created` with no
+       * payments against it. A row reading "executed" with no qualifier would be
+       * the audit trail asserting something the Dashboard flatly contradicts —
+       * which is the one failure this ledger cannot afford.
+       */
+      agent_rationale: payment.simulated
+        ? `capture simulated on ${payment.id}; the order stands and no capture call was made`
+        : `captured the full authorized amount on ${payment.id}`,
       offer_id: offer.offer_id,
       buyer_id: offer.buyer_id,
       amount_inr: settlement.net_paise / 100,

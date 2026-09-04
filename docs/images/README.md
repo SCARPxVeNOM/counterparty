@@ -8,18 +8,25 @@ and only the account holder can take it.
 | `razorpay-captured.jpg` | the console after a capture, with the audit rows it produced | ✅ |
 | `razorpay-payment-link.jpg` | a real Payment Link issued at the gate-signed price | ✅ |
 | `collapse.jpg` | the envelope at 0%, and the sale still available through Razorpay | ✅ |
-| `razorpay-dashboard.jpg` | **the same objects inside Razorpay's own Dashboard** | ⬜ **you** |
+| `dashboard-order-notes.png` | an order in Razorpay's Dashboard, with `authorized_by` in its Notes | ✅ |
+| `dashboard-orders.png` | the orders the agent created, including the one real **Paid** card tap | ✅ |
+| `dashboard-payment-links.png` | four links issued at gate-signed prices, receipts tracing to offer ids | ✅ |
 
-## Why the Dashboard one is worth taking
+## Why the Dashboard ones matter
 
-Every other piece of evidence in this repo is something we produced: our console,
-our ledger, our terminal output. A judge reading it has to accept that the object
-ids are real.
+Every other piece of evidence here is something we produced: our console, our
+ledger, our terminal output. A reader has to accept that the object ids are real.
 
-A Dashboard screenshot is the one artifact **Razorpay produced about us**. It
-closes the loop, and it takes about two minutes.
+The Dashboard captures are the artifacts **Razorpay produced about us**, and they
+closed the loop in both directions — they also caught an overclaim. The README
+had said the console "creates a real order and captures it". The order detail
+shows `Status: Created`, `Payments: No Payments`, because the console's card tap
+is simulated and `captureFull` short-circuits on it. The claim is corrected and
+the ledger now says so in the row itself.
 
-## What to capture
+## Adding more
+
+If you want to re-take or extend these:
 
 Log in at <https://dashboard.razorpay.com>, make sure the **Test Mode** toggle is
 on, and take these four:

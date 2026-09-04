@@ -120,41 +120,58 @@ model call and takes ~45s. Both are real; only one is watchable.
 ## Razorpay, from the console
 
 The negotiation *is* the checkout. A signed offer goes to the rails from the
-screen it was signed on — **Charge** creates a real order and captures it, or
-**a payment link** hands the buyer a live URL they open on their own phone.
+screen it was signed on — **Charge** creates a real Razorpay order, or **a
+payment link** hands the buyer a live URL they open on their own phone.
 
-![Razorpay panel after a capture, with the audit rows it produced](docs/images/razorpay-captured.jpg)
+![Razorpay panel in the console, with the audit rows it produced](docs/images/razorpay-captured.jpg)
 
-Three rows land in the trail, not one — the gate signing, the authorize, the
-capture — each citing the clause that permitted it. Authorize and capture are
-separate decisions, and the gap between them is the option §5.3 is about.
+**What is real and what is not.** The order is a real API call. The card tap is
+simulated, and everything downstream of it inherits that: `SimAuthorizer` mints a
+`pay_SIM…` id that never reaches Razorpay, and `captureFull` short-circuits on
+`payment.simulated` rather than calling `/payments/:id/capture`. So the order
+below sits at **Created** with **No Payments**, exactly as it should:
 
-**The Razorpay object carries the chain.** Fetch that order back:
+![The order in the Razorpay Dashboard, with the clause in its Notes](docs/images/dashboard-order-notes.png)
 
-```json
-"notes": {
-  "offer_id":      "off_console_mtnjns6g_t1",
-  "envelope_id":   "env_demo_0001",
-  "authorized_by": "authority.per_buyer_discount_cap_inr",
-  "depth_pct":     "8"
-}
-```
+That is the honest boundary and not a gap to close — authorizing a payment is a
+human pressing a button on their own device. The one real capture in this account
+came from a human tapping a card: `pay_TUQ7MKc8zXf1gE`, ₹4,491, `captured`, with
+a ₹500 refund against it. `pnpm smoke:live --wait` is that path.
 
-<!-- Drop the Dashboard screenshot in and delete this comment to show it.
-     See docs/images/README.md for exactly what to capture and what to redact.
-![The same objects in the Razorpay Dashboard](docs/images/razorpay-dashboard.jpg)
--->
-
-Open it in the Dashboard and the clause that authorized the price is on the
-object. The audit trail is not only in this repo — and none of the ids in this
-README are ones you have to take on trust:
+**The Razorpay object carries the chain.** Look at the Notes panel above:
+`offer_id`, `envelope_id`, `depth_pct` — and scrolled just out of frame,
+`authorized_by: authority.per_buyer_discount_cap_inr`. The clause that permitted
+the price rides on Razorpay's own record. Fetch it back yourself:
 
 ```bash
 curl -u "$RZP_KEY_ID:$RZP_KEY_SECRET" \
-  https://api.razorpay.com/v1/orders/order_TY87q17mUQfIXb
+     https://api.razorpay.com/v1/orders/order_TY87q17mUQfIXb
 ```
 
-![A real Razorpay payment link issued at the signed price](docs/images/razorpay-payment-link.jpg)
+None of the ids in this README are ones you have to take on trust.
+
+![Orders created by the agent, in the Dashboard](docs/images/dashboard-orders.png)
+
+`order_TUPw5MK32kzrcc` is the **Paid** one, 2 attempts — the first was
+`4111 1111 1111 1111`, which an Indian account declines, and the second was the
+domestic card that worked. Both are in the account as real recorded payments.
+
+### Payment links, from the console and the campaign
+
+![Payment links issued at gate-signed prices](docs/images/dashboard-payment-links.png)
+
+Four real links, all `Issued`. Read the **Receipt No.** column — it is the offer
+id, so every link traces back to the negotiation that produced it:
+
+| Receipt | Amount | Source |
+|---|---|---|
+| `off_console_mtnke0wy_t1` | ₹13,772.40 | the console, at a gate-signed 8% |
+| `off_console_mtnk5h6w_t1` | ₹13,772.40 | the console |
+| `camp_live_mtnk1u83_m002` | ₹4,391.20 | `pnpm campaign:live --issue`, a real abandoned order |
+| `camp_live_mtnk1u83_m001` | ₹4,391.20 | the same campaign |
+
+> The Dashboard lists these as `inv_…` while the API returns `plink_…` — same
+> object, same suffix. Razorpay's payment links are invoices underneath.
 
 `/api/pay` sends an **offer id, never an amount**. It looks the offer up among
 the ones the gate signed this session, and `rails.createOrder` takes a
@@ -166,7 +183,7 @@ number in a request body has no path to a charge.
 | API | Where |
 |---|---|
 | Orders · create, fetch | console **Charge**, `pnpm buy`, cohort reads |
-| Payments · capture, fetch | console, `settle-order.ts` |
+| Payments · capture, fetch | `settle-order.ts`, `pnpm smoke:live` — **not** the console, whose card tap is simulated |
 | **Payment Links · create** | console, `pnpm campaign:live --issue` |
 | Refunds · create | `refund-payment.ts`, gate-authorized |
 | Plans · Subscriptions | `pnpm smoke:live` |
@@ -377,7 +394,7 @@ The middle column is fussy about what has actually been *done*.
 | 4 | **Payment link at the signed price** | ✅ console + campaign — `plink_TY8UrCfdVSXN4N` |
 | 5 | Authorize | ✅ **a human card at Checkout** — `pay_TUQ7MKc8zXf1gE` |
 | 6 | ~~Partial capture~~ → settle at conceded | replaced — the primitive does not exist ([C1](docs/CORRECTIONS.md)) |
-| 7 | Full capture | ✅ against that real payment, and from the console |
+| 7 | Full capture | ✅ against that real payment. The console's capture is simulated along with its card tap |
 | 8 | Deliberate lapse | **no API call exists to make** — the action is the *absence* of a capture |
 | 9 | Partial refund | ✅ `rfnd_TUTgRaSA1TN6cr` — ₹500 off a real captured payment |
 | 10 | Full refund | not fired — the only captured payment available is the completed-sale artifact |

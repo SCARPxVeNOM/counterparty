@@ -621,8 +621,12 @@ export default function Console() {
             <div className="clauses money">
               <div className="readout-label">
                 Razorpay
-                <span className={`aside ${money_?.paymentId !== undefined ? 'ok' : ''}`}>
-                  {money_?.paymentId !== undefined ? 'CAPTURED' : 'test mode'}
+                <span className={`aside ${money_?.linkId !== undefined ? 'ok' : ''}`}>
+                  {money_?.linkId !== undefined
+                    ? 'LINK ISSUED'
+                    : money_?.orderId !== undefined
+                      ? 'ORDER CREATED'
+                      : 'test mode'}
                 </span>
               </div>
 
@@ -675,13 +679,25 @@ export default function Console() {
               ) : (
                 <>
                   <Clause name="order" value={money_.orderId} />
-                  <Clause name="payment" value={money_.paymentId ?? '—'} />
-                  <Clause name="captured" value={money(money_.amountInr ?? 0)} binding />
+                  <Clause name="amount" value={money(money_.amountInr ?? 0)} binding />
                   <Clause name="settlement path" value={money_.path ?? '—'} />
-                  <Clause name="card" value={money_.simulatedCard === true ? 'simulated' : 'real'} />
+                  <Clause
+                    name="payment"
+                    value={money_.simulatedCard === true ? 'simulated' : (money_.paymentId ?? '—')}
+                    void={money_.simulatedCard === true}
+                  />
+                  {/*
+                    Do not say "captured" when nothing was captured. A simulated
+                    cardholder means captureFull short-circuits and never calls
+                    Razorpay, so the order stays at `created` with no payments
+                    against it — which is exactly what the Dashboard shows.
+                  */}
                   <div className="money-note in-panel">
-                    Real objects in {money_.keyId ?? 'test mode'}. Look them up in the Razorpay
-                    Dashboard.
+                    <b>{money_.orderId}</b> is a real order in{' '}
+                    {money_.keyId ?? 'test mode'} — look it up in the Dashboard.
+                    {money_.simulatedCard === true
+                      ? ' The card tap is simulated, so no payment reached Razorpay and the order stands at “created”. pnpm smoke:live --wait is where a real card is tapped.'
+                      : ''}
                   </div>
                 </>
               )}
