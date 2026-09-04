@@ -300,16 +300,62 @@ export default function Console() {
 
         <div className="panel-body" ref={transcriptRef}>
           {view.transcript.length === 0 ? (
-            <div className="empty">
-              <p>
-                This is the merchant&rsquo;s selling agent. It proposes; it never commits. Every price it
-                puts forward goes to a <b>mandate gate</b> holding an envelope the merchant signed, and
-                the gate either signs the offer or refuses it citing a clause by name.
+            <div className="intro">
+              {/*
+                The first screen has to answer "what am I looking at" before it
+                answers anything else. Someone who has never seen this project
+                should be able to read this, press one button, and understand
+                what happened — without knowing what a mandate is.
+              */}
+              <h1>An AI sales agent that cannot give away your money</h1>
+              <p className="intro-lede">
+                Shops are starting to let AI answer customers and quote prices. The risk is
+                obvious: a car dealership&rsquo;s chatbot was talked into selling a $76,000 truck for
+                $1. The AI here can say anything too — but it <b>cannot agree to a price on its
+                own</b>.
               </p>
-              <p>
-                Negotiate with it below, or pick an adversarial persona and try to make it give away
-                something the merchant never authorized.
-              </p>
+
+              <ol className="how">
+                <li>
+                  <span className="step">1</span>
+                  <div>
+                    <b>The shop owner signs a rulebook.</b> Maximum 15% off, never below cost,
+                    ₹40,000 of discounts a day. It is signed, so it cannot be edited afterwards
+                    without that being obvious.
+                  </div>
+                </li>
+                <li>
+                  <span className="step">2</span>
+                  <div>
+                    <b>The AI negotiates, but only proposes.</b> Every price it wants to offer is
+                    handed to a separate checker that holds the rulebook.
+                  </div>
+                </li>
+                <li>
+                  <span className="step">3</span>
+                  <div>
+                    <b>The checker approves or refuses, and says which rule applied.</b> Approved
+                    prices get a cryptographic signature. Nothing without one can take payment.
+                  </div>
+                </li>
+              </ol>
+
+              <div className="try">
+                <div className="try-head">Try it — pick a buyer below</div>
+                <p>
+                  <b>Honest bulk buyer</b> negotiates fairly and gets a real discount. Watch the
+                  middle panel approve it.
+                </p>
+                <p>
+                  <b>Prompt injector</b> <span className="marker">•</span> hides an instruction in
+                  their message telling the AI to give 90% off. Watch the discount limit drop to
+                  zero and stay there — the sale still completes, at full price.
+                </p>
+                <p className="try-foot">
+                  Or type your own message and try to talk it into a price it is not allowed to
+                  give. Everything either agent does lands in the audit log on the right.
+                </p>
+              </div>
             </div>
           ) : (
             <div className="transcript">
@@ -372,38 +418,51 @@ export default function Console() {
       <aside className="panel instruments">
         <div className="panel-head">mandate gate</div>
         <div className="panel-body">
-          <div className="readout">
-            <div className="readout-label">
-              discount authority
-              <span className="aside">
-                {collapsed ? 'revoked' : `ceiling ${view.authority.mandateCeilingPct}%`}
-              </span>
+          {/* ── the three numbers you glance at ──────────────────────────
+              One band, side by side. As three stacked blocks with a 46px
+              figure each, they pushed everything else below the fold and
+              gave a budget gauge the same weight as the collapse state. */}
+          <div className="stat-band">
+            <div className="stat">
+              <div className="stat-label">Discount authority</div>
+              <div className={`stat-value ${collapsed ? 'oxide' : 'amber'}`}>
+                {view.authority.ceilingPct.toFixed(1)}
+                <span className="unit">%</span>
+              </div>
+              <div className={`stat-sub ${collapsed ? 'oxide' : ''}`}>
+                {collapsed ? 'revoked · was ' : 'ceiling '}
+                {view.authority.mandateCeilingPct}%
+              </div>
             </div>
-            <div className={`big ${collapsed ? 'oxide' : 'amber'}`}>
-              {view.authority.ceilingPct.toFixed(1)}
-              <span className="unit">% off list</span>
+
+            <div className="stat">
+              <div className="stat-label">Manipulation pressure</div>
+              <div className={`stat-value ${collapsed ? 'oxide' : ''}`}>
+                {view.pressure.score.toFixed(2)}
+              </div>
+              <div className="stat-sub">
+                guard {view.pressure.guardThreshold} · collapse {view.pressure.collapseThreshold}
+              </div>
+              <div className="stat-rule">
+                <i
+                  className={collapsed ? 'oxide' : ''}
+                  style={{ width: `${Math.min(100, view.pressure.score * 100)}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="stat">
+              <div className="stat-label">Discount budget</div>
+              <div className="stat-value">{money(view.budget.remainingInr)}</div>
+              <div className="stat-sub">of {money(view.budget.limitInr)} today</div>
+              <div className="stat-rule">
+                <i style={{ width: `${Math.max(0, budgetPct)}%` }} />
+              </div>
             </div>
           </div>
 
-          <div className="readout">
-            <div className="readout-label">
-              manipulation pressure
-              <span className="aside">{view.pressure.score.toFixed(2)}</span>
-            </div>
-            <div className="meter">
-              <div
-                className={`meter-fill ${collapsed ? 'oxide' : 'amber'}`}
-                style={{ width: `${Math.min(100, view.pressure.score * 100)}%` }}
-              />
-              <div className="meter-tick" style={{ left: `${view.pressure.guardThreshold * 100}%` }} />
-              <div className="meter-tick" style={{ left: `${view.pressure.collapseThreshold * 100}%` }} />
-            </div>
-            <div className="meter-scale">
-              <span>0</span>
-              <span>guard {view.pressure.guardThreshold}</span>
-              <span>collapse {view.pressure.collapseThreshold}</span>
-            </div>
-
+          <div className="ratchet-row">
+            <span className="stat-label">Envelope state</span>
             <div className="ratchet" title="Monotonic within a session. Only human review resets it.">
               {(['NORMAL', 'GUARDED', 'COLLAPSED'] as const).map((state) => {
                 const order = { NORMAL: 0, GUARDED: 1, COLLAPSED: 2 };
@@ -420,20 +479,6 @@ export default function Console() {
                   </div>
                 );
               })}
-            </div>
-          </div>
-
-          <div className="readout">
-            <div className="readout-label">
-              shared discount budget
-              <span className="aside">today</span>
-            </div>
-            <div className="big amber">
-              {money(view.budget.remainingInr)}
-              <span className="unit">of {money(view.budget.limitInr)}</span>
-            </div>
-            <div className="meter" style={{ marginTop: 9 }}>
-              <div className="meter-fill amber" style={{ width: `${Math.max(0, budgetPct)}%` }} />
             </div>
           </div>
 

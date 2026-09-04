@@ -1,17 +1,28 @@
 import type { Metadata } from 'next';
-import { Instrument_Serif, IBM_Plex_Mono } from 'next/font/google';
+import { IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google';
 import './globals.css';
 
 /**
- * Instrument Serif for headings — high-contrast, slightly legal, and it carries
- * the weight the word "mandate" needs. IBM Plex Mono for everything else,
- * because every number on this screen is a readout and readouts are tabular.
- * Neither is a font anyone reaches for by default, which is the point.
+ * Two faces from one family, doing two different jobs.
+ *
+ * IBM Plex Sans carries the interface — labels, headings, prose, controls.
+ * IBM Plex Mono carries anything a reader might need to compare, copy or
+ * distrust: amounts, percentages, key ids, signatures, hashes, clause paths.
+ *
+ * That split is the convention every serious financial interface follows, and
+ * the earlier version of this console broke it by setting everything in mono.
+ * All-monospace reads as a developer's terminal rather than an instrument
+ * someone runs a business on, and it wastes the one signal mono actually
+ * carries: this is a figure, and its columns line up.
+ *
+ * Plex is IBM's design-system family — drawn for dense technical interfaces,
+ * with a true tabular mono and a sans that holds up at 11px. It is also not
+ * the default anyone reaches for.
  */
-const display = Instrument_Serif({
-  weight: '400',
+const sans = IBM_Plex_Sans({
+  weight: ['400', '500', '600'],
   subsets: ['latin'],
-  variable: '--font-display',
+  variable: '--font-sans',
   display: 'swap',
 });
 
@@ -29,7 +40,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${display.variable} ${mono.variable}`}>
+    <html lang="en" className={`${sans.variable} ${mono.variable}`}>
       <body>{children}</body>
     </html>
   );
