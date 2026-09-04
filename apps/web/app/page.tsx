@@ -783,13 +783,12 @@ export default function Console() {
                   >
                     Simulate the card tap
                   </button>
+                  <TestCard />
                   <span className="money-note">
-                    <b>Pay by card</b> opens Razorpay Checkout on the gate-signed order. Use
-                    <code> 4100 2800 0000 1007</code>, any future expiry, any CVV — the
-                    domestic test card. The payment and the capture are real.
-                    <br />
-                    <b>Simulate</b> creates the real order and stops there, for demoing
-                    without a card. Nothing is captured and the order stays at “created”.
+                    <b>Pay by card</b> opens Razorpay Checkout on the gate-signed order — the
+                    payment and the capture are real. <b>Simulate</b> creates the real order
+                    and stops there, for demoing without a card: nothing is captured and the
+                    order stays at “created”.
                   </span>
                 </div>
               ) : (
@@ -817,6 +816,7 @@ export default function Console() {
                         ? ' The card tap was simulated, so no payment reached Razorpay and the order stands at “created”.'
                         : ' A cardholder paid it and the capture is real.'}
                   </div>
+                  {money_.awaitingCard === true && <TestCard />}
                 </>
               )}
 
@@ -1031,6 +1031,43 @@ function Clause({
  * the Chevrolet-Tahoe-for-$1 failure reproduced in the interface after being
  * prevented in the system.
  */
+/**
+ * The test card, where the person about to need it is looking.
+ *
+ * It was a clause in a paragraph of small print under three buttons, which is
+ * the same as not being there. Anyone opening this console is one tap from a
+ * Razorpay form asking for a card number they do not have, and the answer
+ * should not require reading the README.
+ */
+function TestCard() {
+  const [copied, setCopied] = useState(false);
+  const number = '4100 2800 0000 1007';
+
+  return (
+    <div className="testcard">
+      <div className="testcard-head">Razorpay test card</div>
+      <button
+        className="testcard-number"
+        title="Copy"
+        onClick={() => {
+          void navigator.clipboard?.writeText(number.replace(/ /g, ''));
+          setCopied(true);
+          window.setTimeout(() => setCopied(false), 1600);
+        }}
+      >
+        {number}
+        <span className="testcard-copy">{copied ? 'copied' : 'copy'}</span>
+      </button>
+      <div className="testcard-rest">
+        Any future expiry · any CVV · any name
+        <br />
+        Domestic card — <code>4111 1111 1111 1111</code> is international and this account
+        declines it.
+      </div>
+    </div>
+  );
+}
+
 function Verdict({ row }: { row: Row }) {
   const refused = row.outcome === 'refused';
   return (

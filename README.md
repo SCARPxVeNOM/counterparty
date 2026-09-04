@@ -115,6 +115,19 @@ pnpm dev           # the console at http://localhost:3939
 Persona buttons replay recorded Gemini in ~100ms. A message you type is a live
 model call and takes ~45s. Both are real; only one is watchable.
 
+### Take a payment in 30 seconds
+
+1. **Honest bulk buyer** — the gate signs a discount
+2. **Pay … by card** — Razorpay Checkout opens on the signed order
+3. **Cards** → `4100 2800 0000 1007` · any future expiry · any CVV · **Success**
+
+The panel flips to **PAID** with a real `pay_…`, and two rows land in the
+ledger. The console shows the card number under the button, so you do not have
+to come back here for it.
+
+> `4111 1111 1111 1111` is the *international* test card and an Indian account
+> declines it — that decline is in the Dashboard as a real recorded failure.
+
 ---
 
 ## Razorpay, from the console

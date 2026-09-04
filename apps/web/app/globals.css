@@ -1804,3 +1804,71 @@ a.primary.link {
   line-height: 38px;
   text-decoration: none;
 }
+
+/* ── the test card ───────────────────────────────────────────────────────
+ *
+ * Anyone opening this console is one tap away from a Razorpay form asking for
+ * a card number they do not have. The answer should not require reading the
+ * README, so it sits under the button that needs it, copyable.
+ */
+
+.testcard {
+  margin-top: 10px;
+  padding: 11px 12px 12px;
+  border: 1px dashed var(--line-2);
+  border-radius: var(--r);
+  background: var(--card-2);
+}
+
+.testcard-head {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 7px;
+}
+
+.testcard-number {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--card);
+  font-family: var(--font-mono), monospace;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color 0.14s;
+}
+
+.testcard-number:hover {
+  border-color: var(--brand);
+}
+
+.testcard-copy {
+  margin-left: auto;
+  font-family: var(--font-sans), sans-serif;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--brand-deep);
+}
+
+.testcard-rest {
+  margin-top: 7px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--ink-3);
+}
+
+.testcard-rest code {
+  font-size: 11px;
+  color: var(--ink-2);
+}
