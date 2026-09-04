@@ -14,6 +14,7 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
+import { Shell } from '../shell';
 import type { OnboardResponse } from '../api/onboard/route';
 
 interface Fixture {
@@ -57,21 +58,16 @@ export default function OnboardPage() {
   );
 
   return (
-    <main className="onboard">
-      <header className="masthead">
-        <div>
-          <span className="wordmark">Counterparty</span>
-          <span className="tagline">onboarding — what the agent may sell, and on what authority</span>
-        </div>
-        <div className="masthead-right">
-          <a className="badge" href="/">
-            ← console
-          </a>
-        </div>
-      </header>
+    <Shell page="onboard">
+      <div className="topbar">
+        <h1>Onboarding</h1>
+        <span className="tagline">what the agent may sell, and on what authority</span>
+      </div>
+
+      <div className="onboard">
 
       <section className="panel">
-        <div className="panel-head">source</div>
+        <div className="panel-head">Source</div>
         <div className="panel-body">
           <p className="lede">
             The selling agent cannot negotiate without knowing what it sells and at what margin.
@@ -119,7 +115,7 @@ export default function OnboardPage() {
 
       {result === null ? null : result.ok !== true ? (
         <section className="panel collapsed">
-          <div className="panel-head">extraction failed</div>
+          <div className="panel-head">Extraction failed</div>
           <div className="panel-body">
             <p className="reason">{result.error}</p>
             {result.source === undefined ? null : (
@@ -132,7 +128,8 @@ export default function OnboardPage() {
       ) : (
         <Result result={result} />
       )}
-    </main>
+      </div>
+    </Shell>
   );
 }
 
@@ -146,7 +143,7 @@ function Result({ result }: { result: OnboardResponse }) {
   return (
     <>
       <section className="panel">
-        <div className="panel-head">read</div>
+        <div className="panel-head">What was read</div>
         <div className="panel-body">
           <div className="readout">
             <span className="readout-label">source</span>
@@ -188,7 +185,7 @@ function Result({ result }: { result: OnboardResponse }) {
       </section>
 
       <section className="panel">
-        <div className="panel-head">confidence, and what moved it</div>
+        <div className="panel-head">Confidence, and what moved it</div>
         <div className="panel-body">
           {(result.fields ?? []).map((field) => (
             <div key={field.field} className="field">
@@ -237,7 +234,7 @@ function Result({ result }: { result: OnboardResponse }) {
       </section>
 
       <section className={`panel${blocked ? ' collapsed' : ''}`}>
-        <div className="panel-head">draft authority</div>
+        <div className="panel-head">Draft authority</div>
         <div className="panel-body">
           <div className="readout">
             <span className="readout-label">max depth</span>

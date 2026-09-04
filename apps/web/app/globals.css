@@ -1,77 +1,63 @@
 /*
  * Counterparty console.
  *
- * A risk and treasury instrument. The reference points are the tools people
- * actually run money on — a trading terminal's density, a treasury product's
- * discipline — not a dashboard template.
+ * A fintech product surface: a fixed rail, rounded cards floating on a tinted
+ * ground, soft shadows, generous spacing. Dense where the data is dense and
+ * calm everywhere else.
  *
- * FOUR RULES, AND THE FIRST ONE MATTERS MOST.
+ * COLOUR MEANS SOMETHING, AND GREEN IS NOT DECORATION.
  *
- * 1. SANS CARRIES THE INTERFACE. MONO CARRIES FIGURES.
- *    Labels, headings, prose and controls are Plex Sans. Mono is reserved for
- *    things a reader compares, copies or distrusts: amounts, percentages, key
- *    ids, signatures, hashes, clause paths. Setting the whole screen in mono —
- *    which this console used to do — reads as a developer's terminal and throws
- *    away the one thing mono signals.
+ *   green   authority the merchant granted, and prices signed under it
+ *   red     refusal, and the envelope collapsing
+ *   teal    cryptographic proof — signatures, the chain, the buyer's own check
  *
- * 2. THE BASE IS NEUTRAL. COLOUR IS AN EVENT.
- *    Near-black through to paper in true greys. Colour appears on roughly a
- *    tenth of the surface and always means one specific thing:
+ * Consumer banking uses green for money, healthy, go. That reading is kept,
+ * and it is why the palette is worth more here than an aesthetic: this system's
+ * entire job is to REFUSE, so when authority collapses the surface has to
+ * change meaning rather than shade. Green to red is the most legible state
+ * change a screen has, and the collapse is the whole demonstration.
  *
- *      amber   authority, and the spending of it
- *      oxide   refusal, and collapse
- *      cyan    cryptographic proof — signatures, chains, the counterparty check
+ * TYPE: sans carries the interface, mono carries figures.
  *
- *    When the panel goes oxide, that is the envelope collapsing, and it should
- *    be the only thing anyone looks at. It cannot be if a third of the screen
- *    is already amber.
- *
- * 3. TRACKING IS ALMOST NEVER THE ANSWER.
- *    Small caps labels get 0.04em. Nothing gets 0.16em. Wide-tracked uppercase
- *    on every label is a decorative tic that costs legibility and buys nothing.
- *
- * 4. DATA GOES IN TABLES, WITH HEADERS AND HAIRLINES.
- *    Not floating rows separated by dotted lines. A column of numbers needs a
- *    column header, right alignment and tabular figures, or it is a list
- *    pretending to be a table.
+ * Labels, headings, prose and controls are Plex Sans. Mono is reserved for what
+ * a reader compares, copies or distrusts: amounts, percentages, key ids,
+ * signatures, hashes, clause paths. That split is the convention every serious
+ * financial interface follows, and it is what stops a dense screen reading as a
+ * developer's terminal.
  */
 
-/*
- * LIGHT, BECAUSE THIS IS A BUSINESS TOOL.
- *
- * A dark console reads as a developer artifact. The products merchants
- * actually run money on — the dashboards, the treasury tools, the risk
- * queues — are light, because they are read for hours by people who are not
- * engineers, and because printed evidence, screenshots and PDFs all live in
- * the same visual world as the screen.
- *
- * Colour still means exactly one thing each, and now it has to earn its place
- * against paper rather than glow against black, so the three accents are
- * darkened to hold contrast on white.
- */
 :root {
-  --bg: #eeeeea;
-  --surface: #ffffff;
-  --surface-2: #f6f6f3;
-  --surface-3: #e8e8e4;
-  --line: #e0e0d9;
-  --line-strong: #c8c8c0;
+  /* Ground and paper. The tint is barely there; it exists so white cards read
+     as raised rather than as holes. */
+  --bg: #eef2f0;
+  --card: #ffffff;
+  --card-2: #f6f9f7;
+  --line: #e4ebe7;
+  --line-2: #d3ded8;
 
-  --text: #1b1b1d;
-  --text-2: #56565e;
-  --text-3: #86868e;
+  --ink: #101a15;
+  --ink-2: #5c6b64;
+  --ink-3: #93a09a;
 
-  --amber: #a35b06;
-  --amber-soft: rgba(163, 91, 6, 0.09);
-  --oxide: #b8362a;
-  --oxide-soft: rgba(184, 54, 42, 0.07);
-  --cyan: #0d6e86;
-  --cyan-soft: rgba(13, 110, 134, 0.07);
-  --green: #1f7a4d;
+  --brand: #16a34a;
+  --brand-deep: #12813b;
+  --brand-ink: #0d3f21;
+  --brand-soft: #dcf5e5;
+  --brand-tint: rgba(22, 163, 74, 0.08);
 
-  --r: 5px;
-  --shadow: 0 1px 2px rgba(24, 24, 27, 0.06);
-  --shadow-lift: 0 1px 3px rgba(24, 24, 27, 0.09), 0 0 0 1px rgba(24, 24, 27, 0.03);
+  --danger: #d9342b;
+  --danger-soft: #fde8e6;
+  --danger-tint: rgba(217, 52, 43, 0.07);
+
+  --proof: #0e7f95;
+  --proof-soft: #d7f1f6;
+  --proof-tint: rgba(14, 127, 149, 0.07);
+
+  --r-card: 14px;
+  --r: 9px;
+  --r-pill: 999px;
+
+  --shadow: 0 1px 2px rgba(16, 26, 21, 0.05), 0 1px 1px rgba(16, 26, 21, 0.03);
 }
 
 *,
@@ -86,13 +72,12 @@ body {
   padding: 0;
   height: 100%;
   background: var(--bg);
-  color: var(--text);
+  color: var(--ink);
   font-family: var(--font-sans), system-ui, sans-serif;
   font-size: 13px;
   line-height: 1.45;
-  letter-spacing: -0.003em;
+  letter-spacing: -0.004em;
   -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
 }
 
 /* Anything a reader compares, copies or distrusts. */
@@ -102,126 +87,279 @@ body {
 .hash,
 .seq,
 .big,
-.clause-row .value,
+.stat-value,
+.stat-sub,
+.tagline,
 code {
   font-family: var(--font-mono), ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.012em;
 }
 
-/* ── chassis ─────────────────────────────────────────────────────────── */
+svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
 
-.console {
+/* ═══ shell ═══════════════════════════════════════════════════════════ */
+
+.shell {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(400px, 0.78fr) minmax(400px, 0.82fr);
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-columns: 232px minmax(0, 1fr);
   height: 100vh;
   background: var(--bg);
 }
 
-/* ── top bar ─────────────────────────────────────────────────────────── */
+.rail {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 18px 14px;
+  background: var(--card);
+  border-right: 1px solid var(--line);
+  overflow-y: auto;
+}
 
-.masthead {
-  grid-column: 1 / -1;
+.brand {
   display: flex;
   align-items: center;
-  gap: 14px;
-  height: 52px;
-  padding: 0 18px;
-  border-bottom: 1px solid var(--line);
-  background: var(--surface);
-  box-shadow: var(--shadow);
-  z-index: 2;
+  gap: 10px;
+  padding: 2px 8px 18px;
+  text-decoration: none;
+  color: var(--ink);
 }
 
-.wordmark {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  font-size: 14px;
+.brand-mark {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: linear-gradient(140deg, var(--brand) 0%, var(--brand-deep) 100%);
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.28);
+  flex: none;
+}
+
+.brand-name {
+  font-size: 15px;
   font-weight: 600;
-  letter-spacing: -0.02em;
-  color: var(--text);
+  letter-spacing: -0.025em;
 }
 
-/* A mark, so the product has an identity that is not just a typeface. */
-.wordmark::before {
-  content: '';
-  width: 15px;
-  height: 15px;
-  border: 1.5px solid var(--amber);
-  border-radius: 3px;
-  background: linear-gradient(135deg, var(--amber-soft), transparent);
+.rail-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
 
-.tagline {
+.rail-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 36px;
+  padding: 0 11px;
+  border-radius: var(--r);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-2);
+  text-decoration: none;
+  transition: background 0.14s, color 0.14s;
+}
+
+.rail-link:hover {
+  background: var(--card-2);
+  color: var(--ink);
+}
+
+.rail-link.on {
+  background: var(--brand-soft);
+  color: var(--brand-ink);
+  font-weight: 600;
+}
+
+.rail-link.on svg {
+  color: var(--brand-deep);
+}
+
+.rail-label {
+  margin: 20px 0 7px;
+  padding: 0 11px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.rail-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fact {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 32px;
+  padding: 0 11px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+
+.fact svg {
+  color: var(--ink-3);
+  width: 14px;
+  height: 14px;
+}
+
+.fact-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fact-value {
+  margin-left: auto;
   font-family: var(--font-mono), monospace;
   font-size: 11.5px;
-  color: var(--text-3);
-  padding-left: 14px;
-  border-left: 1px solid var(--line);
+  color: var(--ink-2);
+  white-space: nowrap;
 }
 
-.masthead-right {
+.fact-value.on {
+  color: var(--brand-deep);
+  font-weight: 500;
+}
+
+.fact-value.proof {
+  color: var(--proof);
+  font-weight: 500;
+}
+
+.fact-value.bad {
+  color: var(--danger);
+  font-weight: 500;
+}
+
+/* Where a dashboard template puts an upgrade promo. */
+.rail-card {
+  margin-top: auto;
+  padding: 15px 15px 16px;
+  border-radius: var(--r-card);
+  background: linear-gradient(150deg, var(--brand-deep) 0%, #0c5f2c 100%);
+  color: #eafaf0;
+}
+
+.rail-card-value {
+  font-family: var(--font-mono), monospace;
+  font-size: 25px;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.rail-card-label {
+  margin-top: 3px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(234, 250, 240, 0.68);
+}
+
+.rail-card p {
+  margin: 11px 0 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: rgba(234, 250, 240, 0.8);
+}
+
+/* ═══ work area ═══════════════════════════════════════════════════════ */
+
+.work {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px 12px;
+  flex: none;
+}
+
+.topbar h1 {
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.028em;
+  margin: 0;
+}
+
+.topbar .tagline {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.topbar-right {
   margin-left: auto;
   display: flex;
-  gap: 6px;
   align-items: center;
+  gap: 8px;
 }
 
-/* ── chips ───────────────────────────────────────────────────────────── */
+/* ═══ chips and buttons ═══════════════════════════════════════════════ */
 
-/*
- * One chip style. The old header had five differently-coloured pills competing
- * at equal weight, so none of them meant anything. These are neutral by
- * default; a coloured dot carries the state, and only a genuine alarm takes
- * over the whole chip.
- */
 .badge {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  height: 25px;
-  padding: 0 9px;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--r);
-  background: var(--surface);
-  color: var(--text-2);
-  font-size: 11.5px;
+  gap: 7px;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--card);
+  color: var(--ink-2);
+  font-size: 12px;
   font-weight: 500;
   white-space: nowrap;
   text-decoration: none;
+  box-shadow: var(--shadow);
 }
 
 a.badge:hover {
-  color: var(--text);
-  border-color: var(--text-3);
+  color: var(--ink);
+  border-color: var(--line-2);
 }
 
 .badge .dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--text-3);
+  background: var(--ink-3);
   flex: none;
 }
 
 .badge.live .dot {
-  background: var(--amber);
+  background: var(--brand);
 }
 
 .badge.proof .dot {
-  background: var(--cyan);
+  background: var(--proof);
 }
 
 .badge.alarm {
-  border-color: rgba(184, 54, 42, 0.4);
-  background: var(--oxide-soft);
-  color: var(--oxide);
+  border-color: transparent;
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 
 .badge.alarm .dot {
-  background: var(--oxide);
+  background: var(--danger);
 }
 
 .pulse {
@@ -234,56 +372,123 @@ a.badge:hover {
   }
 }
 
-/* ── panels ──────────────────────────────────────────────────────────── */
+.persona {
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  height: 30px;
+  padding: 0 13px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--card);
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: border-color 0.14s, color 0.14s, background 0.14s;
+}
+
+.persona:hover:not(:disabled) {
+  color: var(--ink);
+  border-color: var(--line-2);
+  background: var(--card-2);
+}
+
+/* Adversarial personas are marked with a dot, not a full recolour. */
+.persona.hostile::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--danger);
+  margin-right: 7px;
+  vertical-align: 1px;
+}
+
+.persona:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.send,
+.primary {
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  height: 38px;
+  padding: 0 20px;
+  border: none;
+  border-radius: var(--r);
+  background: var(--brand);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(18, 129, 59, 0.3);
+  transition: background 0.14s;
+}
+
+.send:hover:not(:disabled),
+.primary:hover:not(:disabled) {
+  background: var(--brand-deep);
+}
+
+.send:disabled,
+.primary:disabled {
+  background: var(--line);
+  color: var(--ink-3);
+  box-shadow: none;
+  cursor: default;
+}
+
+/* ═══ cards ═══════════════════════════════════════════════════════════ */
+
+.panel,
+.ledger,
+.clauses,
+.reference {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow);
+}
 
 .panel,
 .ledger {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  border-left: 1px solid var(--line);
-  background: var(--surface);
-}
-
-.panel.negotiation {
-  border-left: none;
+  overflow: hidden;
 }
 
 .panel-head {
   display: flex;
   align-items: center;
   gap: 10px;
-  height: 34px;
+  height: 42px;
   padding: 0 16px;
   border-bottom: 1px solid var(--line);
-  background: var(--surface-2);
-  font-size: 11px;
+  font-size: 12.5px;
   font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-2);
+  letter-spacing: -0.01em;
+  color: var(--ink);
   flex: none;
 }
 
 .panel-head .count {
   margin-left: auto;
   font-family: var(--font-mono), monospace;
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 400;
-  letter-spacing: 0;
-  text-transform: none;
-  color: var(--text-3);
+  color: var(--ink-3);
 }
 
 .panel-head .count.persisted {
-  margin-left: 10px;
+  margin-left: 8px;
   padding-left: 10px;
-  border-left: 1px solid var(--line-strong);
-  color: var(--cyan);
+  border-left: 1px solid var(--line);
+  color: var(--proof);
 }
 
 .panel-head .count.persisted.alarm {
-  color: var(--oxide);
+  color: var(--danger);
 }
 
 .chain-state {
@@ -291,18 +496,16 @@ a.badge:hover {
   align-items: center;
   gap: 6px;
   font-family: var(--font-mono), monospace;
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 400;
-  letter-spacing: 0;
-  text-transform: none;
-  color: var(--cyan);
+  color: var(--proof);
 }
 
 .chain-state .dot {
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: var(--cyan);
+  background: var(--proof);
 }
 
 .panel-body {
@@ -310,29 +513,209 @@ a.badge:hover {
   min-height: 0;
   flex: 1;
   scrollbar-width: thin;
-  scrollbar-color: var(--line-strong) transparent;
+  scrollbar-color: var(--line-2) transparent;
 }
 
-.panel-body::-webkit-scrollbar {
-  width: 9px;
+.panel-body::-webkit-scrollbar,
+.ledger-body::-webkit-scrollbar {
+  width: 10px;
 }
 
-.panel-body::-webkit-scrollbar-thumb {
-  background: var(--line-strong);
-  border-radius: 5px;
-  border: 3px solid var(--surface);
+.panel-body::-webkit-scrollbar-thumb,
+.ledger-body::-webkit-scrollbar-thumb {
+  background: var(--line-2);
+  border-radius: 6px;
+  border: 3px solid var(--card);
 }
 
+/* The transcript grows from the bottom like a conversation, so an empty
+   session is not three-quarters dead space. */
 .panel.negotiation > .panel-body {
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
 }
 
-/* ── transcript ──────────────────────────────────────────────────────── */
+/* ═══ the console grid ════════════════════════════════════════════════ */
+
+.console {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(370px, 0.72fr) minmax(340px, 0.66fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 14px;
+  padding: 0 20px 20px;
+  min-height: 0;
+  flex: 1;
+}
+
+/* ═══ stat row ════════════════════════════════════════════════════════ */
+
+.stat-band {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(230px, auto);
+  gap: 14px;
+  align-items: stretch;
+}
+
+.stat {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow);
+  padding: 13px 16px 14px;
+  min-width: 0;
+}
+
+.stat-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+/* A tinted circular glyph, the way the reference marks each figure. */
+.stat-label::before {
+  content: '';
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--brand-tint);
+  flex: none;
+}
+
+.console.collapsed .stat-label::before {
+  background: var(--danger-tint);
+}
+
+.stat-value {
+  font-size: 26px;
+  font-weight: 500;
+  line-height: 1.1;
+  margin-top: 9px;
+  color: var(--ink);
+}
+
+.stat-value.amber {
+  color: var(--brand-deep);
+}
+
+.stat-value.oxide {
+  color: var(--danger);
+}
+
+.stat-value .unit {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--ink-3);
+  margin-left: 2px;
+}
+
+/* The delta pill from the reference, doing a real job. */
+.stat-sub {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 8px;
+  padding: 2px 9px;
+  border-radius: var(--r-pill);
+  background: var(--card-2);
+  font-size: 11px;
+  color: var(--ink-2);
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stat-sub.oxide {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.stat-rule {
+  height: 4px;
+  margin-top: 10px;
+  background: var(--card-2);
+  border-radius: var(--r-pill);
+  overflow: hidden;
+}
+
+.stat-rule > i {
+  display: block;
+  height: 100%;
+  border-radius: var(--r-pill);
+  background: var(--brand);
+  transition: width 0.45s cubic-bezier(0.2, 0.7, 0.3, 1), background 0.3s;
+}
+
+.stat-rule > i.oxide {
+  background: var(--danger);
+}
+
+/* ═══ the ratchet ═════════════════════════════════════════════════════ */
+
+.ratchet-row {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  padding: 13px 16px 14px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow);
+}
+
+.ratchet {
+  display: flex;
+  gap: 4px;
+}
+
+.ratchet .detent {
+  padding: 6px 12px;
+  border-radius: var(--r-pill);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--ink-3);
+  background: var(--card-2);
+  transition: background 0.25s, color 0.25s;
+}
+
+.ratchet .detent.passed {
+  background: var(--line);
+  color: var(--ink-2);
+}
+
+.ratchet .detent.current {
+  background: var(--brand);
+  color: #fff;
+}
+
+/*
+ * Collapse is the loudest thing this console has, and it is one-way within a
+ * session: nothing here animates back.
+ */
+.console.collapsed .ratchet .detent.current {
+  background: var(--danger);
+  color: #fff;
+  animation: alarm-in 0.45s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+@keyframes alarm-in {
+  0% {
+    opacity: 0.3;
+    transform: scale(0.96);
+  }
+}
+
+/* ═══ transcript ══════════════════════════════════════════════════════ */
 
 .transcript {
-  padding: 18px 20px 16px;
+  padding: 18px 18px 14px;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -340,9 +723,9 @@ a.badge:hover {
 
 .utterance {
   display: grid;
-  grid-template-columns: 58px minmax(0, 1fr);
+  grid-template-columns: 54px minmax(0, 1fr);
   gap: 12px;
-  padding: 10px 0;
+  padding: 9px 0;
   animation: settle 0.28s cubic-bezier(0.2, 0.7, 0.3, 1) both;
 }
 
@@ -358,53 +741,51 @@ a.badge:hover {
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--text-3);
+  color: var(--ink-3);
   padding-top: 3px;
 }
 
 .utterance.agent .who {
-  color: var(--amber);
+  color: var(--brand-deep);
 }
 
 .said {
   font-size: 13.5px;
   line-height: 1.55;
   white-space: pre-wrap;
-  color: var(--text);
+  color: var(--ink);
 }
 
 .utterance.buyer .said {
-  color: var(--text-2);
+  color: var(--ink-2);
 }
 
 /*
- * Detector evidence, marked in place inside the buyer's own words.
- *
- * Never paraphrased — these spans are byte-for-byte what the detectors
- * captured, so what tripped the envelope is legible rather than described.
+ * Detector evidence, marked in place inside the buyer's own words. Never
+ * paraphrased — these spans are byte-for-byte what the detectors captured, so
+ * what tripped the envelope is legible rather than described.
  */
 .evidence {
-  color: var(--oxide);
-  background: var(--oxide-soft);
-  box-shadow: inset 0 -1px 0 rgba(184, 54, 42, 0.45);
-  padding: 1px 2px;
-  border-radius: 2px;
+  color: var(--danger);
+  background: var(--danger-soft);
+  padding: 1px 4px;
+  border-radius: 4px;
 }
 
-/* ── the gate's verdict, under the reply it belongs to ───────────────── */
+/* ═══ the gate's verdict, under the reply it belongs to ═══════════════ */
 
 .verdict {
   grid-column: 2;
   margin-top: 10px;
-  border: 1px solid var(--line);
-  border-left: 2px solid var(--amber);
+  padding: 10px 13px;
   border-radius: var(--r);
-  background: var(--surface-2);
-  padding: 9px 12px;
+  background: var(--brand-tint);
+  border-left: 3px solid var(--brand);
 }
 
 .verdict.refused {
-  border-left-color: var(--oxide);
+  background: var(--danger-tint);
+  border-left-color: var(--danger);
 }
 
 .verdict-head {
@@ -412,15 +793,15 @@ a.badge:hover {
   align-items: center;
   gap: 10px;
   font-size: 10.5px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--amber);
+  color: var(--brand-deep);
   white-space: nowrap;
 }
 
 .verdict.refused .verdict-head {
-  color: var(--oxide);
+  color: var(--danger);
 }
 
 .verdict-amount {
@@ -428,1135 +809,37 @@ a.badge:hover {
   font-family: var(--font-mono), monospace;
   font-size: 14px;
   font-weight: 500;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.012em;
   text-transform: none;
-  color: var(--text);
+  color: var(--ink);
 }
 
 .verdict .clause {
   margin-top: 5px;
   font-size: 12px;
-  color: var(--text-3);
+  color: var(--ink-2);
 }
 
 .verdict .clause b {
   font-family: var(--font-mono), monospace;
   font-weight: 400;
-  color: var(--text-2);
-}
-
-.verdict.refused .clause b {
-  color: var(--oxide);
-}
-
-.empty {
-  padding: 22px 20px;
-  color: var(--text-2);
-  font-size: 13px;
-  line-height: 1.6;
-  max-width: 58ch;
-}
-
-.empty p + p {
-  margin-top: 11px;
-}
-
-.empty b {
-  color: var(--text);
-  font-weight: 600;
-}
-
-/* ── composer ────────────────────────────────────────────────────────── */
-
-.composer {
-  flex: none;
-  border-top: 1px solid var(--line);
-  background: var(--surface-2);
-  padding: 11px 16px 13px;
-}
-
-.personas {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  margin-bottom: 10px;
-}
-
-.persona {
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 500;
-  height: 27px;
-  padding: 0 10px;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--r);
-  background: var(--surface);
-  color: var(--text-2);
-  cursor: pointer;
-  transition: border-color 0.12s, color 0.12s, background 0.12s;
-}
-
-.persona:hover:not(:disabled) {
-  color: var(--text);
-  border-color: var(--text-3);
-  background: var(--surface-2);
-}
-
-/* Adversarial personas are marked with a dot, not a full recolour. */
-.persona.hostile::before {
-  content: '';
-  display: inline-block;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--oxide);
-  margin-right: 6px;
-  vertical-align: 1px;
-}
-
-.persona:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-
-.composer-line {
-  display: flex;
-  gap: 8px;
-  align-items: stretch;
-}
-
-.composer-line textarea {
-  flex: 1;
-  resize: none;
-  height: 56px;
-  font-family: inherit;
-  font-size: 13px;
-  line-height: 1.5;
-  padding: 9px 11px;
-  color: var(--text);
-  background: var(--surface);
-  border: 1px solid var(--line-strong);
-  border-radius: var(--r);
-  outline: none;
-  transition: border-color 0.12s, box-shadow 0.12s;
-}
-
-.composer-line textarea:focus {
-  border-color: var(--amber);
-  box-shadow: 0 0 0 3px var(--amber-soft);
-}
-
-.composer-line textarea::placeholder {
-  color: var(--text-3);
-}
-
-.send {
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  padding: 0 18px;
-  border: 1px solid var(--amber);
-  border-radius: var(--r);
-  background: var(--amber);
-  color: #ffffff;
-  cursor: pointer;
-  transition: filter 0.12s;
-}
-
-.send:hover:not(:disabled) {
-  filter: brightness(1.1);
-}
-
-.send:disabled {
-  background: var(--surface-2);
-  border-color: var(--line-strong);
-  color: var(--text-3);
-  cursor: default;
-}
-
-/* ── instruments ─────────────────────────────────────────────────────── */
-
-/*
- * The three live readouts sit in one band, side by side.
- *
- * They used to be three stacked blocks each with a 46px number, which pushed
- * everything else below the fold and gave a budget gauge the same weight as
- * the collapse state. A stat band is how any treasury product presents the
- * numbers you glance at, and it costs a third of the height.
- */
-.stat-band {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  border-bottom: 1px solid var(--line);
-  background: var(--surface);
-}
-
-.stat {
-  padding: 12px 14px 13px;
-  border-left: 1px solid var(--line);
-  min-width: 0;
-}
-
-.stat:first-child {
-  border-left: none;
-}
-
-.stat-label {
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-3);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.stat-value {
-  font-family: var(--font-mono), monospace;
-  font-size: 25px;
-  font-weight: 500;
-  line-height: 1.15;
-  letter-spacing: -0.025em;
-  margin-top: 5px;
-  color: var(--text);
-}
-
-.stat-value.amber {
-  color: var(--amber);
-}
-
-.stat-value.oxide {
-  color: var(--oxide);
-}
-
-.stat-value .unit {
-  font-size: 12px;
-  font-weight: 400;
-  color: var(--text-3);
-  margin-left: 2px;
-  letter-spacing: 0;
-}
-
-.stat-sub {
-  font-family: var(--font-mono), monospace;
-  font-size: 11px;
-  color: var(--text-3);
-  margin-top: 3px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.stat-sub.oxide {
-  color: var(--oxide);
-}
-
-/* A hairline progress rule under a stat. Two pixels, not a chunky bar. */
-.stat-rule {
-  height: 2px;
-  margin-top: 8px;
-  background: var(--surface-3);
-  border-radius: 1px;
-  overflow: hidden;
-}
-
-.stat-rule > i {
-  display: block;
-  height: 100%;
-  background: var(--amber);
-  transition: width 0.4s cubic-bezier(0.2, 0.7, 0.3, 1), background 0.3s;
-}
-
-.stat-rule > i.oxide {
-  background: var(--oxide);
-}
-
-/* ── the ratchet ─────────────────────────────────────────────────────── */
-
-.ratchet-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--line);
-  background: var(--surface-2);
-}
-
-.ratchet-row .stat-label {
-  flex: none;
-}
-
-.ratchet {
-  display: flex;
-  margin-left: auto;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--r);
-  overflow: hidden;
-}
-
-.ratchet .detent {
-  padding: 4px 11px;
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-3);
-  background: var(--surface-2);
-  border-left: 1px solid var(--line-strong);
-  transition: background 0.25s, color 0.25s;
-}
-
-.ratchet .detent:first-child {
-  border-left: none;
-}
-
-.ratchet .detent.passed {
-  color: var(--text-2);
-  background: var(--surface-3);
-}
-
-.ratchet .detent.current {
-  background: var(--amber);
-  color: #ffffff;
+  color: var(--ink);
 }
 
 /*
- * Collapse is the loudest state this console has, and it is one-way within a
- * session: nothing here animates back.
+ * Two states that used to render nothing at all: a message that tightened the
+ * envelope, and a reply that proposed no price. Silence about a real event is
+ * still silence.
  */
-.console.collapsed .ratchet .detent.current {
-  background: var(--oxide);
-  color: #ffffff;
-  animation: alarm-in 0.45s cubic-bezier(0.2, 0.7, 0.3, 1) both;
-}
-
-@keyframes alarm-in {
-  0% {
-    opacity: 0.35;
-  }
-}
-
-/* ── data tables ─────────────────────────────────────────────────────── */
-
-.clauses {
-  border-bottom: 1px solid var(--line);
-}
-
-.clauses > .readout-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 28px;
-  padding: 0 16px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--line);
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-3);
-}
-
-.readout-label .aside {
-  margin-left: auto;
-  font-family: var(--font-mono), monospace;
-  font-weight: 400;
-  letter-spacing: 0;
-  text-transform: none;
-  font-size: 11px;
-  color: var(--text-3);
-}
-
-.readout-label .aside.ok {
-  color: var(--cyan);
-  font-weight: 500;
-}
-
-.readout-label .aside.alarm {
-  color: var(--oxide);
-  font-weight: 500;
-}
-
-.clause-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-height: 29px;
-  padding: 4px 16px;
-  font-size: 12.5px;
-  color: var(--text-2);
-  border-bottom: 1px solid var(--line);
-}
-
-.clause-row:last-child {
-  border-bottom: none;
-}
-
-.clause-row:hover {
-  background: var(--surface-2);
-}
-
-.clause-row .name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.clause-row .value {
-  margin-left: auto;
-  color: var(--text);
-  white-space: nowrap;
-  font-size: 12.5px;
-}
-
-/* The clause that actually bound this decision. */
-.clause-row.binding .name {
-  color: var(--text);
-}
-
-.clause-row.binding .value {
-  color: var(--amber);
-  font-weight: 500;
-}
-
-/* A clause whose authority is currently zero, or a SKU that cannot be
-   discounted. Marked, never hidden. */
-.clause-row.void .name,
-.clause-row.void .value {
-  color: var(--oxide);
-}
-
-.console.collapsed .clause-row.binding .value {
-  color: var(--oxide);
-}
-
-/*
- * The counterparty check.
- *
- * The only block on this screen computed from the BUYER's inputs — the offer as
- * JSON, the envelope, a public key. Cyan, because it is cryptographic proof and
- * nothing else, and a rule down its edge to say it is not the merchant marking
- * its own homework.
- */
-.clauses.counterparty {
-  border-left: 2px solid var(--cyan);
-  background: var(--surface);
-}
-
-.clauses.counterparty > .readout-label {
-  background: var(--cyan-soft);
-}
-
-.clauses.counterparty .clause-row .value {
-  color: var(--text-3);
-  font-size: 11.5px;
-}
-
-.clauses.counterparty .clause-row.void .value {
-  color: var(--oxide);
-  font-weight: 500;
-}
-
-.clauses .aside.alarm {
-  display: block;
-  padding: 8px 16px 10px;
-  font-size: 11.5px;
-  line-height: 1.5;
-  color: var(--oxide);
-  background: var(--oxide-soft);
-}
-
-/* ── audit ledger ────────────────────────────────────────────────────── */
-
-.ledger-body {
-  overflow-y: auto;
-  min-height: 0;
-  flex: 1;
-  scrollbar-width: thin;
-  scrollbar-color: var(--line-strong) transparent;
-}
-
-.ledger-body::-webkit-scrollbar {
-  width: 9px;
-}
-
-.ledger-body::-webkit-scrollbar-thumb {
-  background: var(--line-strong);
-  border-radius: 5px;
-  border: 3px solid var(--surface);
-}
-
-/*
- * One row per money action, refusal and pressure incident.
- *
- * Stacked rather than a five-column table: at this width a table truncates the
- * clause path, and the clause path is the entire reason the row exists.
- */
-.ledger .row {
-  display: grid;
-  grid-template-columns: 38px minmax(0, 1fr) auto;
-  grid-template-areas:
-    'seq action amount'
-    '.   cite   cite'
-    '.   hash   hash';
-  column-gap: 10px;
-  row-gap: 2px;
-  align-items: baseline;
-  padding: 9px 16px 10px;
-  border-bottom: 1px solid var(--line);
-  animation: settle 0.28s cubic-bezier(0.2, 0.7, 0.3, 1) both;
-}
-
-.ledger .row:hover {
-  background: var(--surface-2);
-}
-
-.ledger .row .seq {
-  grid-area: seq;
-  font-size: 11px;
-  color: var(--text-3);
-}
-
-.ledger .row .action {
-  grid-area: action;
-  font-family: var(--font-sans), sans-serif;
-  font-size: 12.5px;
-  font-weight: 600;
-  letter-spacing: -0.005em;
-  color: var(--text);
-}
-
-.ledger .row .amount {
-  grid-area: amount;
-  font-size: 12.5px;
-  font-weight: 500;
-  color: var(--text);
-  white-space: nowrap;
-}
-
-.ledger .row .cite {
-  grid-area: cite;
-  font-family: var(--font-mono), monospace;
-  font-size: 11.5px;
-  color: var(--amber);
-  overflow-wrap: anywhere;
-}
-
-.ledger .row .hash {
-  grid-area: hash;
-  font-size: 11px;
-  color: var(--text-3);
-}
-
-.ledger .row.refused .action,
-.ledger .row.refused .cite {
-  color: var(--oxide);
-}
-
-.ledger .row.incident {
-  background: var(--oxide-soft);
-  box-shadow: inset 3px 0 0 var(--oxide);
-}
-
-.ledger .row.incident .action {
-  color: var(--oxide);
-}
-
-.ledger .empty {
-  max-width: none;
-  font-size: 12.5px;
-}
-
-/* ── reference ───────────────────────────────────────────────────────── */
-
-/*
- * The envelope's clauses, the keys and the catalog do not change during a
- * negotiation. They belong on the screen — a gate that cites a clause the
- * reader cannot look up is citing nothing — but they are consulted, not
- * watched, and giving them the weight of the live readouts is what made this
- * column an undifferentiated stack.
- */
-.reference {
-  border-top: 1px solid var(--line-strong);
-}
-
-.reference-head {
-  padding: 11px 16px 9px;
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-3);
-  background: var(--surface);
-  border-bottom: 1px solid var(--line);
-}
-
-.reference .clause-row {
-  min-height: 26px;
-  font-size: 12px;
-}
-
-.reference .clause-row .name {
-  color: var(--text-3);
-}
-
-.reference .clause-row .value {
-  color: var(--text-2);
-  font-size: 12px;
-}
-
-/*
- * Except when they carry meaning. An earlier version reset these to `inherit`,
- * which resolved to the default text colour and quietly un-marked the
- * low-confidence SKU — the one catalog row anybody needs to notice.
- */
-.reference .clause-row.binding .value {
-  color: var(--amber);
-}
-
-.reference .clause-row.void .name,
-.reference .clause-row.void .value {
-  color: var(--oxide);
-}
-
-/* The empty-state prose reads better at the top of its own column. */
-.panel.negotiation > .panel-body > .empty {
-  margin-bottom: auto;
-}
-
-/* ── responsive ──────────────────────────────────────────────────────── */
-
-/*
- * Below three columns the ledger moves under the negotiation rather than
- * beside it. It never goes away: a console that hides its audit trail to fit a
- * laptop is making the wrong trade for this particular application.
- */
-@media (max-width: 1400px) {
-  .console {
-    grid-template-columns: minmax(0, 1fr) minmax(380px, 0.8fr);
-    grid-template-rows: auto minmax(0, 1.4fr) minmax(0, 0.6fr);
-  }
-
-  .ledger {
-    grid-column: 1 / -1;
-    border-left: none;
-    border-top: 1px solid var(--line-strong);
-  }
-}
-
-@media (max-width: 900px) {
-  .console {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto minmax(320px, 1fr) auto auto;
-    height: auto;
-    min-height: 100vh;
-  }
-
-  .panel,
-  .ledger {
-    border-left: none;
-    border-top: 1px solid var(--line);
-  }
-
-  .masthead {
-    height: auto;
-    flex-wrap: wrap;
-    gap: 10px;
-    padding: 10px 14px;
-  }
-
-  .masthead-right {
-    margin-left: 0;
-    flex-wrap: wrap;
-  }
-
-  .stat-band {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .stat:nth-child(3) {
-    grid-column: 1 / -1;
-    border-left: none;
-    border-top: 1px solid var(--line);
-  }
-}
-
-/* ═══════════════════════════════════════════════════════════════════════
- * ONBOARDING
- *
- * The screen a merchant sees once, before any of the rest of this exists.
- * Its whole argument is that every number arrives with the evidence behind
- * it — a confidence bar on its own is a verdict the merchant has to accept;
- * a confidence bar above "no unit cost anywhere in the page" is an argument
- * they can act on. So the layout is one reading column, and the evidence is
- * never smaller than the number it explains.
- * ══════════════════════════════════════════════════════════════════════ */
-
-.onboard {
-  display: block;
-  min-height: 100vh;
-  background: var(--bg);
-}
-
-.onboard > .panel {
-  border: 1px solid var(--line);
-  border-radius: var(--r);
-  box-shadow: var(--shadow);
-  max-width: 940px;
-  margin: 18px auto;
-  overflow: hidden;
-}
-
-.onboard > .panel > .panel-body {
-  padding: 18px 20px 22px;
-  overflow: visible;
-}
-
-/* A failed read is a legitimate outcome here, not an error state to hide. */
-.onboard > .panel.collapsed {
-  border-left: 2px solid var(--oxide);
-}
-
-.onboard > .panel.collapsed > .panel-head {
-  color: var(--oxide);
-  background: var(--oxide-soft);
-}
-
-.lede {
-  margin: 0 0 16px;
-  font-size: 14px;
-  line-height: 1.6;
-  color: var(--text-2);
-  max-width: 66ch;
-}
-
-.onboard .composer-line {
-  max-width: 640px;
-}
-
-.target,
-.sku {
-  font-family: var(--font-mono), monospace;
-  font-size: 13px;
-  height: 34px;
-  padding: 0 11px;
-  color: var(--text);
-  background: var(--surface);
-  border: 1px solid var(--line-strong);
-  border-radius: var(--r);
-  outline: none;
-  transition: border-color 0.12s, box-shadow 0.12s;
-}
-
-.target {
-  flex: 1;
-}
-
-.sku {
-  width: 170px;
-}
-
-.target:focus,
-.sku:focus {
-  border-color: var(--amber);
-  box-shadow: 0 0 0 3px var(--amber-soft);
-}
-
-.target::placeholder,
-.sku::placeholder {
-  color: var(--text-3);
-}
-
-.primary {
-  font-family: inherit;
-  font-size: 12.5px;
-  font-weight: 600;
-  height: 34px;
-  padding: 0 16px;
-  border: 1px solid var(--amber);
-  border-radius: var(--r);
-  background: var(--amber);
-  color: #ffffff;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: filter 0.12s;
-}
-
-.primary:hover:not(:disabled) {
-  filter: brightness(1.1);
-}
-
-.primary:disabled {
-  background: var(--surface-2);
-  border-color: var(--line-strong);
-  color: var(--text-3);
-  cursor: default;
-}
-
-.fixtures {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  margin-top: 10px;
-}
-
-.fixtures .persona.on {
-  border-color: var(--amber);
-  color: var(--amber);
-  background: var(--amber-soft);
-}
-
-/* ── the read ────────────────────────────────────────────────────────── */
-
-/*
- * Label left, value right, hairline between. The same table the gate panel
- * uses, because it is the same kind of information.
- */
-.onboard .readout {
-  display: flex;
-  align-items: baseline;
-  gap: 16px;
-  min-height: 31px;
-  padding: 5px 0;
-  border-bottom: 1px solid var(--line);
-}
-
-.onboard .readout:last-child {
-  border-bottom: none;
-}
-
-.onboard .readout > .readout-label {
-  flex: none;
-  width: 130px;
-  height: auto;
-  padding: 0;
-  background: none;
-  border: none;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-3);
-}
-
-.onboard .readout > :not(.readout-label) {
-  font-family: var(--font-mono), monospace;
-  font-size: 13px;
-  color: var(--text);
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.onboard .big {
-  font-size: 19px;
-  font-weight: 500;
-  letter-spacing: -0.02em;
-}
-
-.onboard .big.amber,
-.onboard .amber {
-  color: var(--amber);
-}
-
-.onboard .big.oxide,
-.onboard .oxide {
-  color: var(--oxide);
-}
-
-.mono-wrap {
-  overflow-wrap: anywhere;
-}
-
-.dim {
-  color: var(--text-3);
-}
-
-/* ── confidence, and what moved it ───────────────────────────────────── */
-
-.field {
-  padding: 14px 0 16px;
-  border-bottom: 1px solid var(--line);
-}
-
-.field:last-child {
-  border-bottom: none;
-}
-
-.field-head {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  margin-bottom: 8px;
-}
-
-.field-head > .readout-label {
-  height: auto;
-  padding: 0;
-  background: none;
-  border: none;
-  font-family: var(--font-mono), monospace;
-  font-size: 12.5px;
-  font-weight: 400;
-  letter-spacing: 0;
-  text-transform: none;
-  color: var(--text);
-}
-
-.field-head > :not(.readout-label) {
-  margin-left: auto;
-  font-family: var(--font-mono), monospace;
-  font-size: 14px;
-  font-weight: 500;
-  letter-spacing: -0.01em;
-}
-
-/*
- * The confidence bar, with the threshold marked on it.
- *
- * A score means nothing without the line it has to clear, and putting the
- * threshold only in a legend makes the reader do the comparison.
- */
-.meter {
-  position: relative;
-  height: 6px;
-  background: var(--surface-3);
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.meter-fill {
-  height: 100%;
-  background: var(--amber);
-  transition: width 0.4s cubic-bezier(0.2, 0.7, 0.3, 1);
-}
-
-.meter-fill.oxide {
-  background: var(--oxide);
-}
-
-.meter-tick {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background: var(--text-2);
-  opacity: 0.85;
-}
-
-/* ── the evidence ────────────────────────────────────────────────────── */
-
-.reason {
-  margin: 8px 0 0;
-  font-size: 12.5px;
-  line-height: 1.55;
-  color: var(--text-2);
-}
-
-.reason.dim {
-  color: var(--text-3);
-}
-
-.reason .kind {
-  display: inline-block;
-  font-family: var(--font-mono), monospace;
-  font-size: 11px;
-  padding: 1px 6px;
-  margin-right: 7px;
-  border: 1px solid var(--line-strong);
-  border-radius: 3px;
-  background: var(--surface-2);
-  color: var(--text-2);
-}
-
-/* The snippet the value was read from, quoted verbatim. */
-.reason .evidence {
-  display: block;
-  margin-top: 6px;
-  padding: 7px 10px;
-  border-left: 2px solid var(--line-strong);
-  border-radius: 0 var(--r) var(--r) 0;
-  background: var(--surface-2);
-  box-shadow: none;
-  font-family: var(--font-mono), monospace;
-  font-size: 11.5px;
-  line-height: 1.5;
-  color: var(--text-3);
-  overflow-wrap: anywhere;
-}
-
-.reason.provenance {
-  margin-top: 10px;
-  padding-top: 8px;
-  border-top: 1px dotted var(--line);
-  font-family: var(--font-mono), monospace;
-  font-size: 11px;
-  color: var(--text-3);
-  overflow-wrap: anywhere;
-}
-
-@media (max-width: 720px) {
-  .onboard .composer-line {
-    flex-wrap: wrap;
-  }
-
-  .sku {
-    width: 100%;
-  }
-
-  .onboard .readout {
-    flex-direction: column;
-    gap: 3px;
-  }
-
-  .onboard .readout > .readout-label {
-    width: auto;
-  }
-}
-
-/* ── the first screen ────────────────────────────────────────────────────
- *
- * Whoever opens this has not read the README. They need to know what the
- * thing is, why it should exist, and what to press — in that order, in
- * ordinary words, before any jargon. This is the only place on the console
- * that uses prose sizes rather than data sizes.
- */
-
-.intro {
-  padding: 26px 28px 30px;
-  max-width: 620px;
-  margin-bottom: auto;
-}
-
-.intro h1 {
-  font-size: 21px;
-  font-weight: 600;
-  line-height: 1.28;
-  letter-spacing: -0.024em;
-  color: var(--text);
-  margin: 0 0 12px;
-}
-
-.intro-lede {
-  font-size: 14px;
-  line-height: 1.6;
-  color: var(--text-2);
-  margin: 0 0 22px;
-}
-
-.intro-lede b {
-  color: var(--text);
-  font-weight: 600;
-}
-
-/* ── how it works ────────────────────────────────────────────────────── */
-
-.how {
-  list-style: none;
-  margin: 0 0 24px;
-  padding: 0;
-  border-top: 1px solid var(--line);
-}
-
-.how li {
-  display: flex;
-  gap: 12px;
-  padding: 13px 0;
-  border-bottom: 1px solid var(--line);
-  font-size: 13px;
-  line-height: 1.55;
-  color: var(--text-2);
-}
-
-.how .step {
-  flex: none;
-  width: 21px;
-  height: 21px;
-  border-radius: 50%;
-  border: 1px solid var(--line-strong);
-  background: var(--surface-2);
-  color: var(--text-3);
-  font-family: var(--font-mono), monospace;
-  font-size: 11px;
-  font-weight: 500;
-  display: grid;
-  place-items: center;
-  margin-top: 1px;
-}
-
-.how b {
-  color: var(--text);
-  font-weight: 600;
-}
-
-/* ── what to press ───────────────────────────────────────────────────── */
-
-.try {
-  border: 1px solid var(--line);
-  border-left: 2px solid var(--amber);
-  border-radius: var(--r);
-  background: var(--surface-2);
-  padding: 14px 16px 15px;
-}
-
-.try-head {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--amber);
-  margin-bottom: 9px;
-}
-
-.try p {
-  margin: 0 0 8px;
-  font-size: 13px;
-  line-height: 1.55;
-  color: var(--text-2);
-}
-
-.try b {
-  color: var(--text);
-  font-weight: 600;
-}
-
-/* Matches the dot on the adversarial persona buttons, so the sentence and
-   the control it refers to are visibly the same thing. */
-.try .marker {
-  color: var(--oxide);
-  font-size: 15px;
-  line-height: 0;
-  vertical-align: middle;
-}
-
-.try-foot {
-  margin-bottom: 0;
-  padding-top: 9px;
-  border-top: 1px solid var(--line-strong);
-  color: var(--text-3);
-}
-
-/* ── turns that produced no offer, and turns that changed the envelope ──
- *
- * Both were previously invisible. An agent can answer a question without
- * proposing a price, and a buyer's message can tighten the envelope without
- * any offer being made on the same turn — in both cases the transcript showed
- * an ordinary exchange and the most important thing that happened left no
- * mark on screen.
- */
-
 .tightened {
   grid-column: 2;
   margin-top: 9px;
-  padding: 8px 11px;
-  border: 1px solid rgba(184, 54, 42, 0.3);
-  border-left: 2px solid var(--oxide);
+  padding: 9px 12px;
   border-radius: var(--r);
-  background: var(--oxide-soft);
+  background: var(--danger-soft);
   font-size: 12.5px;
   line-height: 1.5;
-  color: var(--oxide);
+  color: var(--danger);
 }
 
 .tightened b {
@@ -1566,125 +849,17 @@ a.badge:hover {
 .no-decision {
   grid-column: 2;
   margin-top: 9px;
-  padding-left: 11px;
-  border-left: 2px solid var(--line-strong);
+  padding-left: 12px;
+  border-left: 2px solid var(--line-2);
   font-size: 12.5px;
-  color: var(--text-3);
+  color: var(--ink-3);
 }
 
-/* ═══════════════════════════════════════════════════════════════════════
- * SECTIONS
- *
- * The gate column held nine blocks of different KINDS — a live instrument, a
- * document, a proof, a performance figure, three reference tables — rendered
- * as identical sibling rows running edge to edge. Nothing told a reader where
- * one idea stopped and the next began.
- *
- * They are cards now, on a recessed background, with a titled header each.
- * Institutional software groups before it decorates: the reader should be able
- * to tell what kind of thing they are looking at before they read a single
- * value in it.
- * ══════════════════════════════════════════════════════════════════════ */
-
-.instruments > .panel-body {
-  padding: 12px;
-  background: var(--bg);
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.instruments > .panel-body > .group,
-.instruments > .panel-body > .clauses,
-.instruments > .panel-body > .reference {
-  border: 1px solid var(--line);
-  border-radius: var(--r);
-  background: var(--surface);
-  box-shadow: var(--shadow);
-  overflow: hidden;
-  flex: none;
-}
-
-/* A card's own title bar, distinct from the row labels inside it. */
-.group-head {
-  height: 30px;
-  display: flex;
-  align-items: center;
-  padding: 0 14px;
-  border-bottom: 1px solid var(--line);
-  background: var(--surface-2);
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-2);
-}
-
-/* Inside a card the band and the ratchet lose their outer rules. */
-.group .stat-band {
-  border-bottom: 1px solid var(--line);
-}
-
-.group .ratchet-row {
-  border-bottom: none;
-}
-
-.instruments > .panel-body > .clauses {
-  border-bottom: 1px solid var(--line);
-}
-
-.instruments .clauses > .readout-label {
-  height: 30px;
-  padding: 0 14px;
-  color: var(--text-2);
-  font-size: 10.5px;
-}
-
-.instruments .clause-row {
-  padding-left: 14px;
-  padding-right: 14px;
-}
-
-/* The counterparty card is the buyer's, not the merchant's. It keeps its rule. */
-.instruments > .panel-body > .clauses.counterparty {
-  border-left: 2px solid var(--cyan);
-}
-
-/* Reference is one card holding three tables, visibly a step back. */
-.instruments > .panel-body > .reference {
-  border-top: 1px solid var(--line);
-  background: var(--surface);
-}
-
-.reference-head {
-  height: 30px;
-  display: flex;
-  align-items: center;
-  padding: 0 14px;
-  background: var(--surface-2);
-  border-bottom: 1px solid var(--line);
-}
-
-.reference .clauses {
-  border-bottom: 1px solid var(--line);
-}
-
-.reference .clauses:last-child {
-  border-bottom: none;
-}
-
-/* ── the turn in flight ──────────────────────────────────────────────────
- *
- * A scripted persona replays from a recording in about a tenth of a second.
- * A message someone types is a live model call and can take the better part of
- * a minute. Before this the composer cleared on send and nothing appeared
- * until the reply arrived: the reader's own words vanished and the console
- * looked broken for the entire wait.
- */
+/* the turn in flight */
 
 .transcript.pending {
   padding-top: 0;
-  opacity: 0.75;
+  opacity: 0.8;
 }
 
 .working {
@@ -1693,23 +868,23 @@ a.badge:hover {
   align-items: flex-start;
   font-size: 13px;
   line-height: 1.55;
-  color: var(--text-2);
+  color: var(--ink-2);
 }
 
 .working-note {
   display: block;
   margin-top: 3px;
   font-size: 12px;
-  color: var(--text-3);
+  color: var(--ink-3);
 }
 
 .spin {
   flex: none;
-  width: 11px;
-  height: 11px;
+  width: 12px;
+  height: 12px;
   margin-top: 4px;
-  border: 1.5px solid var(--line-strong);
-  border-top-color: var(--amber);
+  border: 1.5px solid var(--line-2);
+  border-top-color: var(--brand);
   border-radius: 50%;
   animation: spin 0.75s linear infinite;
 }
@@ -1723,5 +898,795 @@ a.badge:hover {
 @media (prefers-reduced-motion: reduce) {
   .spin {
     animation-duration: 2.4s;
+  }
+}
+
+/* ═══ composer ════════════════════════════════════════════════════════ */
+
+.composer {
+  flex: none;
+  border-top: 1px solid var(--line);
+  padding: 13px 16px 15px;
+  background: var(--card-2);
+}
+
+.personas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 11px;
+}
+
+.composer-line {
+  display: flex;
+  gap: 9px;
+  align-items: stretch;
+}
+
+.composer-line textarea {
+  flex: 1;
+  resize: none;
+  height: 54px;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 10px 13px;
+  color: var(--ink);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  outline: none;
+  transition: border-color 0.14s, box-shadow 0.14s;
+}
+
+.composer-line textarea:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-tint);
+}
+
+.composer-line textarea::placeholder {
+  color: var(--ink-3);
+}
+
+.composer-line .send {
+  height: auto;
+}
+
+/* ═══ instruments ═════════════════════════════════════════════════════ */
+
+.instruments > .panel-body {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--card-2);
+}
+
+.instruments > .panel-body > .clauses,
+.instruments > .panel-body > .reference {
+  overflow: hidden;
+  flex: none;
+}
+
+.instruments .clauses > .readout-label,
+.reference-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: -0.008em;
+  color: var(--ink);
+}
+
+.readout-label .aside {
+  margin-left: auto;
+  font-family: var(--font-mono), monospace;
+  font-weight: 400;
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+.readout-label .aside.ok {
+  color: var(--proof);
+  font-weight: 600;
+}
+
+.readout-label .aside.alarm {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+/* ═══ data rows ═══════════════════════════════════════════════════════ */
+
+.clause-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 32px;
+  padding: 5px 14px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  border-bottom: 1px solid var(--line);
+}
+
+.clause-row:last-child {
+  border-bottom: none;
+}
+
+.clause-row:hover {
+  background: var(--card-2);
+}
+
+.clause-row .name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.clause-row .value {
+  margin-left: auto;
+  color: var(--ink);
+  white-space: nowrap;
+  font-size: 12.5px;
+}
+
+/* The clause that actually bound this decision. */
+.clause-row.binding .name {
+  color: var(--ink);
+}
+
+.clause-row.binding .value {
+  color: var(--brand-deep);
+  font-weight: 500;
+}
+
+/* A clause whose authority is currently zero, or a SKU that cannot be
+   discounted. Marked, never hidden. */
+.clause-row.void .name,
+.clause-row.void .value {
+  color: var(--danger);
+}
+
+.console.collapsed .clause-row.binding .value {
+  color: var(--danger);
+}
+
+/*
+ * The counterparty check — the only block on this screen computed from the
+ * BUYER's inputs: the offer as JSON, the envelope, a public key. Teal, because
+ * it is cryptographic proof and nothing else, and it is not the merchant
+ * marking its own homework.
+ */
+.clauses.counterparty {
+  border-color: var(--proof-soft);
+}
+
+.clauses.counterparty > .readout-label {
+  background: var(--proof-tint);
+  border-bottom-color: var(--proof-soft);
+  color: var(--proof);
+}
+
+.clauses.counterparty .clause-row .value {
+  color: var(--ink-3);
+  font-size: 11.5px;
+}
+
+.clauses.counterparty .clause-row.void .value {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.clauses .aside.alarm {
+  display: block;
+  padding: 9px 14px 11px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+/* ═══ reference ═══════════════════════════════════════════════════════ */
+
+/*
+ * The envelope's clauses, the keys and the catalog do not change during a
+ * negotiation. They belong on the screen — a gate that cites a clause the
+ * reader cannot look up is citing nothing — but they are consulted, not
+ * watched, and giving them the weight of the live readouts is what made this
+ * column an undifferentiated stack.
+ */
+.reference-head {
+  color: var(--ink-3);
+  background: var(--card-2);
+}
+
+.reference .clauses {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  border-bottom: 1px solid var(--line);
+}
+
+.reference .clauses:last-child {
+  border-bottom: none;
+}
+
+.reference .clauses > .readout-label {
+  height: 30px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-3);
+}
+
+.reference .clause-row {
+  min-height: 28px;
+  font-size: 12px;
+}
+
+.reference .clause-row .name {
+  color: var(--ink-3);
+}
+
+.reference .clause-row .value {
+  color: var(--ink-2);
+  font-size: 12px;
+}
+
+.reference .clause-row.binding .value {
+  color: var(--brand-deep);
+}
+
+.reference .clause-row.void .name,
+.reference .clause-row.void .value {
+  color: var(--danger);
+}
+
+/* ═══ audit ledger ════════════════════════════════════════════════════ */
+
+.ledger-body {
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-2) transparent;
+}
+
+/*
+ * One row per money action, refusal and pressure incident. Stacked rather than
+ * a five-column table: at this width a table truncates the clause path, and the
+ * clause path is the entire reason the row exists.
+ */
+.ledger .row {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  grid-template-areas:
+    'seq action amount'
+    '.   cite   cite'
+    '.   hash   hash';
+  column-gap: 10px;
+  row-gap: 3px;
+  align-items: baseline;
+  padding: 11px 16px 12px;
+  border-bottom: 1px solid var(--line);
+  animation: settle 0.28s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+.ledger .row:hover {
+  background: var(--card-2);
+}
+
+.ledger .row .seq {
+  grid-area: seq;
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+.ledger .row .action {
+  grid-area: action;
+  font-family: var(--font-sans), sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.ledger .row .amount {
+  grid-area: amount;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.ledger .row .cite {
+  grid-area: cite;
+  font-family: var(--font-mono), monospace;
+  font-size: 11.5px;
+  color: var(--brand-deep);
+  overflow-wrap: anywhere;
+}
+
+.ledger .row .hash {
+  grid-area: hash;
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+.ledger .row.refused .action,
+.ledger .row.refused .cite {
+  color: var(--danger);
+}
+
+.ledger .row.incident {
+  background: var(--danger-tint);
+  box-shadow: inset 3px 0 0 var(--danger);
+}
+
+.ledger .row.incident .action {
+  color: var(--danger);
+}
+
+/* ═══ the first screen ════════════════════════════════════════════════ */
+
+/*
+ * Whoever opens this has not read the README. They need to know what the thing
+ * is, why it should exist, and what to press — in that order, in ordinary
+ * words, before any jargon.
+ */
+.empty {
+  padding: 24px 22px;
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.6;
+  max-width: 60ch;
+}
+
+.empty p + p {
+  margin-top: 11px;
+}
+
+.empty b {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.intro {
+  padding: 26px 26px 28px;
+  max-width: 600px;
+  margin-bottom: auto;
+}
+
+.intro h1 {
+  font-size: 21px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.028em;
+  color: var(--ink);
+  margin: 0 0 12px;
+}
+
+.intro-lede {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink-2);
+  margin: 0 0 22px;
+}
+
+.intro-lede b {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.how {
+  list-style: none;
+  margin: 0 0 22px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.how li {
+  display: flex;
+  gap: 12px;
+  padding: 13px 15px;
+  border-radius: var(--r-card);
+  background: var(--card-2);
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+.how .step {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--brand-soft);
+  color: var(--brand-ink);
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  font-weight: 600;
+  display: grid;
+  place-items: center;
+  margin-top: 1px;
+}
+
+.how b {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.try {
+  border-radius: var(--r-card);
+  background: var(--brand-tint);
+  padding: 15px 17px 16px;
+}
+
+.try-head {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--brand-deep);
+  margin-bottom: 9px;
+}
+
+.try p {
+  margin: 0 0 8px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+.try b {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* Matches the dot on the adversarial persona buttons, so the sentence and the
+   control it refers to are visibly the same thing. */
+.try .marker {
+  color: var(--danger);
+  font-size: 15px;
+  line-height: 0;
+  vertical-align: middle;
+}
+
+.try-foot {
+  margin-bottom: 0;
+  padding-top: 10px;
+  border-top: 1px solid rgba(22, 163, 74, 0.18);
+  color: var(--ink-3);
+}
+
+/* ═══ onboarding ══════════════════════════════════════════════════════ */
+
+.onboard {
+  padding: 0 20px 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.onboard > .panel {
+  max-width: 900px;
+  margin: 0 auto 14px;
+  overflow: visible;
+}
+
+.onboard > .panel > .panel-body {
+  padding: 18px 20px 22px;
+  overflow: visible;
+}
+
+/* A failed read is a legitimate outcome here, not an error state to hide. */
+.onboard > .panel.collapsed > .panel-head {
+  color: var(--danger);
+}
+
+.lede {
+  margin: 0 0 16px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink-2);
+  max-width: 64ch;
+}
+
+.onboard .composer-line {
+  max-width: 620px;
+}
+
+.target,
+.sku {
+  font-family: var(--font-mono), monospace;
+  font-size: 13px;
+  height: 38px;
+  padding: 0 12px;
+  color: var(--ink);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  outline: none;
+  transition: border-color 0.14s, box-shadow 0.14s;
+}
+
+.target {
+  flex: 1;
+}
+
+.sku {
+  width: 170px;
+}
+
+.target:focus,
+.sku:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-tint);
+}
+
+.target::placeholder,
+.sku::placeholder {
+  color: var(--ink-3);
+}
+
+.fixtures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 11px;
+}
+
+.fixtures .persona.on {
+  border-color: transparent;
+  background: var(--brand-soft);
+  color: var(--brand-ink);
+  font-weight: 600;
+}
+
+/* Label left, value right, hairline between — the same table the gate uses,
+   because it is the same kind of information. */
+.onboard .readout {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  min-height: 34px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.onboard .readout:last-child {
+  border-bottom: none;
+}
+
+.onboard .readout > .readout-label {
+  flex: none;
+  width: 128px;
+  height: auto;
+  padding: 0;
+  border: none;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--ink-3);
+}
+
+.onboard .readout > :not(.readout-label) {
+  font-family: var(--font-mono), monospace;
+  font-size: 13px;
+  color: var(--ink);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.onboard .big {
+  font-size: 19px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+.onboard .big.amber,
+.onboard .amber {
+  color: var(--brand-deep);
+}
+
+.onboard .big.oxide,
+.onboard .oxide {
+  color: var(--danger);
+}
+
+.mono-wrap {
+  overflow-wrap: anywhere;
+}
+
+.dim {
+  color: var(--ink-3);
+}
+
+.field {
+  padding: 15px 0 17px;
+  border-bottom: 1px solid var(--line);
+}
+
+.field:last-child {
+  border-bottom: none;
+}
+
+.field-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 9px;
+}
+
+.field-head > .readout-label {
+  height: auto;
+  padding: 0;
+  border: none;
+  font-family: var(--font-mono), monospace;
+  font-size: 12.5px;
+  font-weight: 400;
+  color: var(--ink);
+}
+
+.field-head > :not(.readout-label) {
+  margin-left: auto;
+  font-family: var(--font-mono), monospace;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/*
+ * The confidence bar, with the threshold marked on it. A score means nothing
+ * without the line it has to clear, and putting the threshold only in a legend
+ * makes the reader do the comparison.
+ */
+.meter {
+  position: relative;
+  height: 7px;
+  background: var(--card-2);
+  border-radius: var(--r-pill);
+  overflow: hidden;
+}
+
+.meter-fill {
+  height: 100%;
+  border-radius: var(--r-pill);
+  background: var(--brand);
+  transition: width 0.4s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+.meter-fill.oxide {
+  background: var(--danger);
+}
+
+.meter-tick {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--ink-2);
+  opacity: 0.6;
+}
+
+.reason {
+  margin: 9px 0 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+.reason.dim {
+  color: var(--ink-3);
+}
+
+.reason .kind {
+  display: inline-block;
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  padding: 2px 8px;
+  margin-right: 8px;
+  border-radius: var(--r-pill);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-weight: 500;
+}
+
+/* The snippet the value was read from, quoted verbatim. */
+.reason .evidence {
+  display: block;
+  margin-top: 7px;
+  padding: 9px 12px;
+  border-radius: var(--r);
+  background: var(--card-2);
+  color: var(--ink-2);
+  font-family: var(--font-mono), monospace;
+  font-size: 11.5px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.reason.provenance {
+  margin-top: 11px;
+  padding-top: 9px;
+  border-top: 1px solid var(--line);
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  color: var(--ink-3);
+  overflow-wrap: anywhere;
+}
+
+/* ═══ responsive ══════════════════════════════════════════════════════ */
+
+/*
+ * Below three columns the ledger moves under the negotiation. It never goes
+ * away: a console that hides its audit trail to fit a laptop is making the
+ * wrong trade for this particular application.
+ */
+@media (max-width: 1440px) {
+  .console {
+    grid-template-columns: minmax(0, 1fr) minmax(360px, 0.78fr);
+    grid-template-rows: auto auto minmax(0, 1.4fr) minmax(0, 0.6fr);
+  }
+
+  .stat-band {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .ratchet-row {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .ledger {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 1080px) {
+  .shell {
+    grid-template-columns: minmax(0, 1fr);
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .rail {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    overflow-x: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+    padding: 10px 14px;
+  }
+
+  .brand {
+    padding: 0 8px 0 0;
+  }
+
+  .rail-nav {
+    flex-direction: row;
+  }
+
+  .rail-label,
+  .rail-facts,
+  .rail-card {
+    display: none;
+  }
+
+  .work {
+    overflow: visible;
+  }
+
+  .console {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(420px, 1fr) auto;
+  }
+
+  .stat-band {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

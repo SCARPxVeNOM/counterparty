@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Shell } from './shell';
 
 /* ── shapes returned by /api/session ──────────────────────────────────── */
 
@@ -280,12 +281,12 @@ export default function Console() {
 
   if (view === null) {
     return (
-      <div className="console">
-        <div className="masthead">
-          <span className="wordmark">Counterparty</span>
+      <Shell page="console">
+        <div className="topbar">
+          <h1>Negotiation console</h1>
         </div>
         <div className="empty">Bringing the gate up…</div>
-      </div>
+      </Shell>
     );
   }
 
@@ -294,52 +295,98 @@ export default function Console() {
   const lastOffer = view.offers.at(-1);
 
   return (
-    <div className={`console${collapsed ? ' collapsed' : ''}`}>
-      <header className="masthead">
-        <span className="wordmark">Counterparty</span>
-        <span className="tagline">selling mandate · {view.envelope.merchantId}</span>
-        <div className="masthead-right">
-          <a
-            className="badge"
-            href="/onboard"
-            title="Read a storefront or a Razorpay Payment Page, and see what discount authority it earns."
-          >
-            onboarding →
-          </a>
-          <span
-            className={`badge ${view.runtime.agentMode === 'gemini' ? 'live' : 'sim'}`}
-            title={
-              view.runtime.agentMode === 'gemini'
-                ? 'The selling agent is a live Gemini model.'
-                : 'No GEMINI_API_KEY, so the agent’s prose is rule-based. The gate, the pressure detectors, the signing and the audit chain are unaffected — none of them are downstream of the model.'
-            }
-          >
-            agent: {view.runtime.agentMode}
-          </span>
-          <span
-            className={`badge ${view.runtime.authorizeMode === 'live' ? 'live' : 'sim'}`}
-            title="Swaps only the moment a human taps a card. Orders, links, Offers, captures and refunds hit the real Razorpay API in both modes."
-          >
-            authorize: {view.runtime.authorizeMode}
-          </span>
-          <span className={`badge ${view.ledger.chainIntact ? 'proof' : 'alarm'}`}>
-            <span className="dot" /> chain {view.ledger.chainIntact ? 'intact' : 'broken'}
-          </span>
+    <Shell
+      page="console"
+      status={{
+        agentMode: view.runtime.agentMode,
+        authorizeMode: view.runtime.authorizeMode,
+        chainIntact: view.ledger.persisted.chainIntact,
+        rowsOnDisk: view.ledger.persisted.rows,
+      }}
+    >
+      <div className="topbar">
+        <h1>Negotiation console</h1>
+        <span className="tagline">{view.envelope.merchantId}</span>
+        <div className="topbar-right">
           {collapsed && (
             <span className="badge alarm">
-              <span className="dot pulse" /> envelope collapsed
+              <span className="dot pulse" /> Envelope collapsed
             </span>
           )}
           <button className="persona" onClick={reset} disabled={busy}>
-            reset
+            Reset
           </button>
         </div>
-      </header>
+      </div>
 
-      {/* ── transcript ──────────────────────────────────────────────── */}
+      <div className={`console${collapsed ? ' collapsed' : ''}`}>
+      {/* ── the three numbers you glance at, across the top ─────────
+          Full width, the way a treasury product leads with its
+          figures. Inside the gate column they were squeezed to a
+          third of the width and their labels truncated. */}
+          <div className="stat-band">
+          <div className="stat">
+            <div className="stat-label">Discount authority</div>
+            <div className={`stat-value ${collapsed ? 'oxide' : 'amber'}`}>
+              {view.authority.ceilingPct.toFixed(1)}
+              <span className="unit">%</span>
+            </div>
+            <div className={`stat-sub ${collapsed ? 'oxide' : ''}`}>
+              {collapsed ? 'revoked · was ' : 'ceiling '}
+              {view.authority.mandateCeilingPct}%
+            </div>
+          </div>
+
+          <div className="stat">
+            <div className="stat-label">Manipulation pressure</div>
+            <div className={`stat-value ${collapsed ? 'oxide' : ''}`}>
+              {view.pressure.score.toFixed(2)}
+            </div>
+            <div className="stat-sub">
+              guard {view.pressure.guardThreshold} · collapse {view.pressure.collapseThreshold}
+            </div>
+            <div className="stat-rule">
+              <i
+                className={collapsed ? 'oxide' : ''}
+                style={{ width: `${Math.min(100, view.pressure.score * 100)}%` }}
+              />
+            </div>
+          </div>
+
+          <div className="stat">
+            <div className="stat-label">Discount budget</div>
+            <div className="stat-value">{money(view.budget.remainingInr)}</div>
+            <div className="stat-sub">of {money(view.budget.limitInr)} today</div>
+            <div className="stat-rule">
+              <i style={{ width: `${Math.max(0, budgetPct)}%` }} />
+            </div>
+          </div>
+
+          <div className="ratchet-row">
+          <span className="stat-label">Envelope state</span>
+          <div className="ratchet" title="Monotonic within a session. Only human review resets it.">
+            {(['NORMAL', 'GUARDED', 'COLLAPSED'] as const).map((state) => {
+              const order = { NORMAL: 0, GUARDED: 1, COLLAPSED: 2 };
+              const current = order[state] === order[view.pressure.state];
+              const passed = order[state] < order[view.pressure.state];
+              return (
+                <div
+                  key={state}
+                  className={`detent${current ? ' current' : ''}${passed ? ' passed' : ''}${
+                    current && state === 'COLLAPSED' ? ' locked' : ''
+                  }`}
+                >
+                  {state}
+                </div>
+              );
+            })}
+            </div>
+          </div>
+        </div>
+
       <section className="panel negotiation">
         <div className="panel-head">
-          negotiation
+          Negotiation
           <span className="count">{Math.ceil(view.transcript.length / 2)} turns</span>
         </div>
 
@@ -506,79 +553,17 @@ export default function Console() {
 
       {/* ── instruments ─────────────────────────────────────────────── */}
       <aside className="panel instruments">
-        <div className="panel-head">mandate gate</div>
+        <div className="panel-head">Mandate gate</div>
         <div className="panel-body">
           {/* ── the three numbers you glance at ──────────────────────────
               One band, side by side. As three stacked blocks with a 46px
               figure each, they pushed everything else below the fold and
               gave a budget gauge the same weight as the collapse state. */}
-          <section className="group">
-            <div className="group-head">Live authority</div>
-            <div className="stat-band">
-            <div className="stat">
-              <div className="stat-label">Discount authority</div>
-              <div className={`stat-value ${collapsed ? 'oxide' : 'amber'}`}>
-                {view.authority.ceilingPct.toFixed(1)}
-                <span className="unit">%</span>
-              </div>
-              <div className={`stat-sub ${collapsed ? 'oxide' : ''}`}>
-                {collapsed ? 'revoked · was ' : 'ceiling '}
-                {view.authority.mandateCeilingPct}%
-              </div>
-            </div>
-
-            <div className="stat">
-              <div className="stat-label">Manipulation pressure</div>
-              <div className={`stat-value ${collapsed ? 'oxide' : ''}`}>
-                {view.pressure.score.toFixed(2)}
-              </div>
-              <div className="stat-sub">
-                guard {view.pressure.guardThreshold} · collapse {view.pressure.collapseThreshold}
-              </div>
-              <div className="stat-rule">
-                <i
-                  className={collapsed ? 'oxide' : ''}
-                  style={{ width: `${Math.min(100, view.pressure.score * 100)}%` }}
-                />
-              </div>
-            </div>
-
-            <div className="stat">
-              <div className="stat-label">Discount budget</div>
-              <div className="stat-value">{money(view.budget.remainingInr)}</div>
-              <div className="stat-sub">of {money(view.budget.limitInr)} today</div>
-              <div className="stat-rule">
-                <i style={{ width: `${Math.max(0, budgetPct)}%` }} />
-              </div>
-            </div>
-          </div>
-
-            <div className="ratchet-row">
-            <span className="stat-label">Envelope state</span>
-            <div className="ratchet" title="Monotonic within a session. Only human review resets it.">
-              {(['NORMAL', 'GUARDED', 'COLLAPSED'] as const).map((state) => {
-                const order = { NORMAL: 0, GUARDED: 1, COLLAPSED: 2 };
-                const current = order[state] === order[view.pressure.state];
-                const passed = order[state] < order[view.pressure.state];
-                return (
-                  <div
-                    key={state}
-                    className={`detent${current ? ' current' : ''}${passed ? ' passed' : ''}${
-                      current && state === 'COLLAPSED' ? ' locked' : ''
-                    }`}
-                  >
-                    {state}
-                  </div>
-                );
-              })}
-            </div>
-            </div>
-          </section>
 
           {lastOffer !== undefined && (
             <div className="clauses">
               <div className="readout-label">
-                last signed offer
+                Last signed offer
                 <span className="aside">{lastOffer.offer_id}</span>
               </div>
               <Clause name="list" value={money(lastOffer.list_total_inr)} />
@@ -596,7 +581,7 @@ export default function Console() {
           {lastOffer !== undefined && (
             <div className="clauses counterparty">
               <div className="readout-label">
-                counterparty check
+                Counterparty check
                 <span className={`aside ${lastOffer.counterparty.accepted ? 'ok' : 'alarm'}`}>
                   {lastOffer.counterparty.accepted ? 'ACCEPTED' : 'REJECTED'}
                 </span>
@@ -622,7 +607,7 @@ export default function Console() {
           {view.revenue.deals > 0 && (
             <div className="clauses">
               <div className="readout-label">
-                against a flat {view.revenue.capPct}% cap
+                Against a flat {view.revenue.capPct}% cap
                 <span className="aside">{view.revenue.deals} deals on disk</span>
               </div>
               <Clause name="a flat cap earns" value={money(view.revenue.staticInr)} />
@@ -642,9 +627,9 @@ export default function Console() {
               a column with no hierarchy at all. The live readouts are
               above; this is what a reader consults, not what they watch. */}
           <div className="reference">
-            <div className="reference-head">reference · does not change during a session</div>
+            <div className="reference-head">Reference — does not change during a session</div>
           <div className="clauses">
-            <div className="readout-label">envelope {view.envelope.id}</div>
+            <div className="readout-label">Envelope {view.envelope.id}</div>
             <Clause name="authority.max_discount_depth_pct" value={`${view.authority.mandateCeilingPct}%`} void={collapsed} />
             <Clause name="authority.bundle_rules.combined_depth_pct" value={`${view.authority.bundleCeilingPct}%`} void={collapsed} />
             <Clause name="authority.floor_margin_pct" value={`${view.authority.floorMarginPct}%`} />
@@ -660,14 +645,14 @@ export default function Console() {
           </div>
 
             <div className="clauses">
-            <div className="readout-label">keys</div>
+            <div className="readout-label">Keys</div>
             <Clause name="merchant (issued the envelope)" value={view.envelope.merchantKid} />
             <Clause name="gate (signs offers)" value={view.envelope.gateKid} />
           </div>
 
             <div className="clauses">
             <div className="readout-label">
-              catalog
+              Catalog
               <span className="aside">margin confidence</span>
             </div>
             {view.catalog.map((sku) => (
@@ -687,7 +672,7 @@ export default function Console() {
       {/* ── ledger ──────────────────────────────────────────────────── */}
       <section className="ledger">
         <div className="panel-head">
-          audit ledger
+          Audit ledger
           <span className="chain-state">
             <span className="dot" />
             {view.ledger.head === null ? 'empty' : `head ${shortHash(view.ledger.head)}`}
@@ -739,7 +724,8 @@ export default function Console() {
           )}
         </div>
       </section>
-    </div>
+      </div>
+    </Shell>
   );
 }
 
