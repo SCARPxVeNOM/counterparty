@@ -145,8 +145,22 @@ function view(session: Session, id: string) {
    * deleted, which is exactly the edit worth catching.
    */
   const rows: AuditRow[] = [...ledger().forSession(id)];
-  const chain = verifyChain(rows);
   const wholeFile = ledger().verify();
+
+  /**
+   * A session's rows cannot be chain-verified on their own, and trying to is a
+   * bug that hides until the second session.
+   *
+   * `verifyChain` walks from the genesis hash forward. A slice starting at seq
+   * 12 has a `prev_hash` pointing at row 11, which is not in the slice, so the
+   * walk fails and the console reports CHAIN BROKEN over a ledger that is
+   * perfectly intact. The first session on a fresh database starts at seq 1 and
+   * passes, which is exactly why this survived until there was history on disk.
+   *
+   * The chain spans the file, so the file is what gets verified. There is only
+   * one honest answer to "is this ledger intact" and it is not per-session.
+   */
+  const chain = wholeFile;
   const config = loadConfig();
 
   const ceiling = pressureCeilingPct(pressure.state, mandate.authority.max_discount_depth_pct);

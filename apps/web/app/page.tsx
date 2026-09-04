@@ -292,7 +292,7 @@ export default function Console() {
       </header>
 
       {/* ── transcript ──────────────────────────────────────────────── */}
-      <section className="panel">
+      <section className="panel negotiation">
         <div className="panel-head">
           negotiation
           <span className="count">{view.transcript.length} turns</span>
@@ -437,43 +437,6 @@ export default function Console() {
             </div>
           </div>
 
-          <div className="clauses">
-            <div className="readout-label">envelope {view.envelope.id}</div>
-            <Clause name="authority.max_discount_depth_pct" value={`${view.authority.mandateCeilingPct}%`} void={collapsed} />
-            <Clause name="authority.bundle_rules.combined_depth_pct" value={`${view.authority.bundleCeilingPct}%`} void={collapsed} />
-            <Clause name="authority.floor_margin_pct" value={`${view.authority.floorMarginPct}%`} />
-            <Clause name="authority.per_buyer_discount_cap_inr" value={money(view.authority.perBuyerCapInr)} />
-            <Clause name="authority.discount_budget_inr_per_day" value={money(view.budget.limitInr)} />
-            <Clause name="authority.capture_window_hours" value={`${view.authority.captureWindowHours}h`} />
-            <Clause name="confidence_policy.min_margin_confidence" value={String(view.authority.minMarginConfidence)} />
-            <Clause
-              name="pressure_policy.collapse_threshold"
-              value={String(view.pressure.collapseThreshold)}
-              binding={collapsed}
-            />
-          </div>
-
-          <div className="clauses">
-            <div className="readout-label">keys</div>
-            <Clause name="merchant (issued the envelope)" value={view.envelope.merchantKid} />
-            <Clause name="gate (signs offers)" value={view.envelope.gateKid} />
-          </div>
-
-          <div className="clauses">
-            <div className="readout-label">
-              catalog
-              <span className="aside">margin confidence</span>
-            </div>
-            {view.catalog.map((sku) => (
-              <Clause
-                key={sku.sku}
-                name={sku.sku}
-                value={`${money(sku.listInr)} · ${sku.marginConfidence.toFixed(2)}`}
-                void={sku.lowConfidence}
-              />
-            ))}
-          </div>
-
           {lastOffer !== undefined && (
             <div className="clauses">
               <div className="readout-label">
@@ -534,6 +497,52 @@ export default function Console() {
               />
             </div>
           )}
+
+          {/* ── reference ───────────────────────────────────────────────
+              Demoted deliberately. These do not change during a
+              negotiation, and a column where nine blocks shout equally is
+              a column with no hierarchy at all. The live readouts are
+              above; this is what a reader consults, not what they watch. */}
+          <div className="reference">
+            <div className="reference-head">reference · does not change during a session</div>
+          <div className="clauses">
+            <div className="readout-label">envelope {view.envelope.id}</div>
+            <Clause name="authority.max_discount_depth_pct" value={`${view.authority.mandateCeilingPct}%`} void={collapsed} />
+            <Clause name="authority.bundle_rules.combined_depth_pct" value={`${view.authority.bundleCeilingPct}%`} void={collapsed} />
+            <Clause name="authority.floor_margin_pct" value={`${view.authority.floorMarginPct}%`} />
+            <Clause name="authority.per_buyer_discount_cap_inr" value={money(view.authority.perBuyerCapInr)} />
+            <Clause name="authority.discount_budget_inr_per_day" value={money(view.budget.limitInr)} />
+            <Clause name="authority.capture_window_hours" value={`${view.authority.captureWindowHours}h`} />
+            <Clause name="confidence_policy.min_margin_confidence" value={String(view.authority.minMarginConfidence)} />
+            <Clause
+              name="pressure_policy.collapse_threshold"
+              value={String(view.pressure.collapseThreshold)}
+              binding={collapsed}
+            />
+          </div>
+
+            <div className="clauses">
+            <div className="readout-label">keys</div>
+            <Clause name="merchant (issued the envelope)" value={view.envelope.merchantKid} />
+            <Clause name="gate (signs offers)" value={view.envelope.gateKid} />
+          </div>
+
+            <div className="clauses">
+            <div className="readout-label">
+              catalog
+              <span className="aside">margin confidence</span>
+            </div>
+            {view.catalog.map((sku) => (
+              <Clause
+                key={sku.sku}
+                name={sku.sku}
+                value={`${money(sku.listInr)} · ${sku.marginConfidence.toFixed(2)}`}
+                void={sku.lowConfidence}
+              />
+            ))}
+          </div>
+
+          </div>
         </div>
       </aside>
 

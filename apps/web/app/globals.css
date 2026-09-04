@@ -12,6 +12,21 @@
  *
  * Nothing else is coloured. When the whole panel goes oxide, that is the
  * envelope collapsing, and it should be the only thing anyone looks at.
+ *
+ * TYPE IS SIZED FOR A PROJECTOR, NOT A DESK.
+ *
+ * The first version of this screen was set at 10–11px, which is correct for an
+ * instrument someone leans into and useless for one being read over a shoulder
+ * or through a recording. Every size below is driven off `--fs`, so the whole
+ * console rescales from one number, and the floor for anything a judge needs to
+ * read — clause names, ledger rows, hashes — is 13px.
+ *
+ * THREE COLUMNS, NOT TWO AND A FOOTER.
+ *
+ * The audit trail used to be a strip along the bottom showing two rows. It is
+ * one of the four things the brief actually asks for, so it gets a full-height
+ * column of its own. Screen area is the most honest statement of priority a
+ * layout can make.
  */
 
 :root {
@@ -21,18 +36,24 @@
   --rule: #241f1c;
   --rule-bright: #372f2a;
 
-  --paper: #e9e3d8;
-  --paper-dim: #9c948a;
-  --paper-faint: #635c55;
+  --paper: #ece6db;
+  --paper-dim: #a49b90;
+  --paper-faint: #6f675f;
 
-  --amber: #e0a13c;
+  --amber: #e8a83f;
   --amber-dim: #7a5720;
-  --oxide: #d4553c;
+  --oxide: #e05c40;
   --oxide-dim: #6e2c1f;
-  --cyan: #56c4d2;
+  --cyan: #5fcedd;
   --cyan-dim: #2a5f66;
 
   --grid: 4px;
+
+  /* One number drives the whole console. */
+  --fs: 15px;
+  --fs-label: 11.5px;
+  --fs-data: 14px;
+  --fs-fine: 12.5px;
 }
 
 *,
@@ -49,7 +70,7 @@ body {
   background: var(--chassis);
   color: var(--paper);
   font-family: var(--font-mono), ui-monospace, monospace;
-  font-size: 13px;
+  font-size: var(--fs);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   font-variant-numeric: tabular-nums;
@@ -79,32 +100,37 @@ h3 {
 
 .console {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(360px, 0.85fr);
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1.06fr) minmax(390px, 0.7fr) minmax(370px, 0.76fr);
+  grid-template-rows: auto minmax(0, 1fr);
   height: 100vh;
   gap: 0;
+}
+
+/* A hairline of oxide down the whole chassis when authority is gone. */
+.console.collapsed {
+  box-shadow: inset 0 0 0 1px var(--oxide-dim);
 }
 
 .masthead {
   grid-column: 1 / -1;
   display: flex;
   align-items: baseline;
-  gap: 18px;
-  padding: 14px 22px 12px;
+  gap: 20px;
+  padding: 16px 24px 14px;
   border-bottom: 1px solid var(--rule);
   background: var(--chassis-raised);
 }
 
 .wordmark {
   font-family: var(--font-display), Georgia, serif;
-  font-size: 25px;
+  font-size: 30px;
   letter-spacing: 0.005em;
 }
 
 .tagline {
   color: var(--paper-faint);
-  font-size: 11px;
-  letter-spacing: 0.07em;
+  font-size: var(--fs-label);
+  letter-spacing: 0.09em;
   text-transform: uppercase;
 }
 
@@ -117,27 +143,28 @@ h3 {
 
 /* ── generic panel ───────────────────────────────────────────────────── */
 
-.panel {
+.panel,
+.ledger {
   display: flex;
   flex-direction: column;
   min-height: 0;
   border-left: 1px solid var(--rule);
 }
 
-.panel:first-child {
+.panel.negotiation {
   border-left: none;
 }
 
 .panel-head {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 9px 18px;
+  gap: 12px;
+  padding: 12px 20px;
   border-bottom: 1px solid var(--rule);
-  font-size: 10px;
-  letter-spacing: 0.16em;
+  font-size: var(--fs-label);
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--paper-faint);
+  color: var(--paper-dim);
   background: var(--chassis-sunk);
   flex: none;
 }
@@ -145,13 +172,14 @@ h3 {
 .panel-head .count {
   margin-left: auto;
   color: var(--paper-faint);
+  letter-spacing: 0.08em;
 }
 
 /* The on-disk total sits beside the session count, dimmer, so the two read as
    one fact seen at two scales rather than as two competing numbers. */
 .panel-head .count.persisted {
-  margin-left: var(--grid);
-  padding-left: var(--grid);
+  margin-left: calc(var(--grid) * 2);
+  padding-left: calc(var(--grid) * 2);
   border-left: 1px solid var(--rule-bright);
   color: var(--cyan-dim);
 }
@@ -168,36 +196,49 @@ h3 {
   scrollbar-color: var(--rule-bright) transparent;
 }
 
+/*
+ * The negotiation column only: the transcript grows from the bottom like a
+ * terminal, so an empty session is not three-quarters dead black.
+ *
+ * Scoped by class rather than `:first-of-type`, which matched the instruments
+ * column too — `<aside>` is the first aside just as `<section>` is the first
+ * section — and pushed the gate readouts off the bottom of their own panel.
+ */
+.panel.negotiation > .panel-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
 /* ── transcript ──────────────────────────────────────────────────────── */
 
 .transcript {
-  padding: 20px 22px 24px;
+  padding: 24px 24px 20px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 22px;
 }
 
 .utterance {
   display: grid;
-  grid-template-columns: 62px minmax(0, 1fr);
-  gap: 14px;
+  grid-template-columns: 66px minmax(0, 1fr);
+  gap: 16px;
   animation: settle 0.32s cubic-bezier(0.2, 0.7, 0.3, 1) both;
 }
 
 @keyframes settle {
   from {
     opacity: 0;
-    transform: translateY(5px);
+    transform: translateY(6px);
   }
 }
 
 .who {
-  font-size: 10px;
+  font-size: var(--fs-label);
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--paper-faint);
   padding-top: 3px;
-  text-align: right;
 }
 
 .utterance.buyer .who {
@@ -205,655 +246,256 @@ h3 {
 }
 
 .said {
+  font-size: 15.5px;
+  line-height: 1.62;
   white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.utterance.buyer .said {
-  color: var(--paper-dim);
-  border-left: 2px solid var(--rule-bright);
-  padding-left: 12px;
-  margin-left: -14px;
+  color: var(--paper);
 }
 
 .utterance.agent .said {
   color: var(--paper);
 }
 
-/* An injected span, marked in place. Verbatim — never paraphrased. */
-mark.evidence {
-  background: transparent;
+/*
+ * Detector evidence, marked in place inside the buyer's own words.
+ *
+ * Never paraphrased — these spans are byte-for-byte what the detectors
+ * captured, so what tripped the envelope is legible rather than described.
+ */
+.evidence {
   color: var(--oxide);
-  border-bottom: 1px dashed var(--oxide-dim);
-  padding-bottom: 1px;
+  background: color-mix(in srgb, var(--oxide) 11%, transparent);
+  border-bottom: 1px solid var(--oxide-dim);
+  padding: 1px 3px;
+  border-radius: 2px;
 }
 
+/* ── the gate's verdict, under the reply it belongs to ───────────────── */
+
+/*
+ * The verdict is the third child of a two-column grid, so without an explicit
+ * column it lands under the 66px speaker label and renders about a fifth of its
+ * intended width. It belongs under the reply it adjudicates.
+ */
 .verdict {
   grid-column: 2;
-  margin-top: 9px;
-  border: 1px solid var(--rule);
-  border-left-width: 2px;
+  margin-top: 12px;
+  border-left: 2px solid var(--amber-dim);
   background: var(--chassis-raised);
-  padding: 10px 13px;
-  font-size: 11.5px;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
+  padding: 12px 16px;
 }
 
-.verdict.signed {
-  border-left-color: var(--amber);
-}
 .verdict.refused {
-  border-left-color: var(--oxide);
+  border-left-color: var(--oxide-dim);
 }
 
 .verdict-head {
   display: flex;
   align-items: baseline;
-  gap: 9px;
-  letter-spacing: 0.1em;
+  gap: 12px;
+  font-size: var(--fs-label);
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  font-size: 10px;
+  color: var(--amber);
+  white-space: nowrap;
 }
 
-.verdict.signed .verdict-head {
-  color: var(--amber);
-}
 .verdict.refused .verdict-head {
   color: var(--oxide);
 }
 
 .verdict-amount {
   margin-left: auto;
-  font-size: 14px;
+  font-size: 17px;
   letter-spacing: 0;
   text-transform: none;
   color: var(--paper);
 }
 
-.clause {
+/* The clause the gate cited, under the reply it authorized. */
+.verdict .clause {
+  margin-top: 7px;
+  font-size: var(--fs-data);
   color: var(--paper-dim);
 }
-.clause b {
+
+.verdict .clause b {
   color: var(--paper);
-  font-weight: 400;
+  font-weight: 500;
+}
+
+.verdict.refused .clause b {
+  color: var(--oxide);
+}
+
+.empty {
+  padding: 32px 28px;
+  color: var(--paper-dim);
+  font-size: var(--fs-data);
+  line-height: 1.7;
+  max-width: 62ch;
+}
+
+.empty p + p {
+  margin-top: 14px;
+}
+
+.empty b {
+  color: var(--amber);
+  font-weight: 500;
+}
+
+/* ── composer ────────────────────────────────────────────────────────── */
+
+.composer {
+  flex: none;
+  border-top: 1px solid var(--rule);
+  background: var(--chassis-sunk);
+  padding: 14px 20px 16px;
+}
+
+.personas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 12px;
+}
+
+.persona {
+  font-family: inherit;
+  font-size: var(--fs-fine);
+  letter-spacing: 0.02em;
+  padding: 6px 11px;
+  border: 1px solid var(--rule-bright);
+  background: transparent;
+  color: var(--paper-dim);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.persona:hover:not(:disabled) {
+  color: var(--paper);
+  border-color: var(--paper-faint);
+  background: var(--chassis-raised);
+}
+
+/* Adversarial personas are marked, so nobody has to guess which is which. */
+.persona.hostile {
+  color: var(--oxide);
+  border-color: var(--oxide-dim);
+}
+
+.persona.hostile:hover:not(:disabled) {
+  color: var(--oxide);
+  border-color: var(--oxide);
+}
+
+.persona:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.composer-line {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.composer-line textarea {
+  flex: 1;
+  resize: none;
+  height: 62px;
+  font-family: inherit;
+  font-size: var(--fs-data);
+  line-height: 1.5;
+  padding: 11px 13px;
+  color: var(--paper);
+  background: var(--chassis);
+  border: 1px solid var(--rule-bright);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.composer-line textarea:focus {
+  border-color: var(--amber-dim);
+}
+
+.composer-line textarea::placeholder {
+  color: var(--paper-faint);
+}
+
+.send {
+  font-family: inherit;
+  font-size: var(--fs-label);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 0 22px;
+  border: 1px solid var(--amber-dim);
+  background: transparent;
+  color: var(--amber);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.send:hover:not(:disabled) {
+  background: var(--amber);
+  color: var(--chassis);
+}
+
+.send:disabled {
+  opacity: 0.35;
+  cursor: default;
+  border-color: var(--rule-bright);
+  color: var(--paper-faint);
 }
 
 /* ── instruments ─────────────────────────────────────────────────────── */
 
-.instruments {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
+.instruments .panel-body {
+  padding-bottom: 20px;
 }
 
 .readout {
-  padding: 13px 18px;
+  padding: 16px 20px 18px;
   border-bottom: 1px solid var(--rule);
 }
 
 .readout-label {
-  font-size: 10px;
-  letter-spacing: 0.14em;
+  font-size: var(--fs-label);
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--paper-faint);
-  margin-bottom: 7px;
+  margin-bottom: 10px;
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: 10px;
 }
 
 .readout-label .aside {
   margin-left: auto;
   letter-spacing: 0;
   text-transform: none;
+  font-size: var(--fs-fine);
 }
 
+/*
+ * The three primary readouts — authority, pressure, budget — are the only
+ * things on this column set at display size. Everything below them is
+ * reference material, and a screen where nine blocks shout equally is a screen
+ * with no hierarchy at all.
+ */
 .big {
-  font-size: 30px;
+  font-size: 46px;
   line-height: 1;
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.015em;
 }
 
 .big .unit {
-  font-size: 14px;
-  color: var(--paper-faint);
+  font-size: 17px;
+  letter-spacing: 0;
+  color: var(--paper-dim);
   margin-left: 3px;
-}
-
-.big.amber {
-  color: var(--amber);
-}
-.big.oxide {
-  color: var(--oxide);
-}
-
-/* Meter: a filled bar over a hairline track. */
-.meter {
-  height: 6px;
-  background: var(--chassis-sunk);
-  border: 1px solid var(--rule);
-  position: relative;
-  overflow: hidden;
-}
-
-.meter-fill {
-  position: absolute;
-  inset: 0 auto 0 0;
-  transition: width 0.55s cubic-bezier(0.3, 0.8, 0.3, 1), background 0.4s;
-}
-
-.meter-fill.amber {
-  background: linear-gradient(90deg, var(--amber-dim), var(--amber));
-}
-.meter-fill.oxide {
-  background: linear-gradient(90deg, var(--oxide-dim), var(--oxide));
-}
-
-/* Threshold ticks on the pressure meter. */
-.meter-tick {
-  position: absolute;
-  top: -3px;
-  bottom: -3px;
-  width: 1px;
-  background: var(--paper-faint);
-}
-
-.meter-scale {
-  display: flex;
-  justify-content: space-between;
-  font-size: 9.5px;
-  color: var(--paper-faint);
-  margin-top: 5px;
-  letter-spacing: 0.05em;
-}
-
-/* Ratchet: three states, and it only ever moves one way. */
-.ratchet {
-  display: flex;
-  gap: 3px;
-  margin-top: 9px;
-}
-
-.detent {
-  flex: 1;
-  padding: 5px 0 4px;
-  text-align: center;
-  font-size: 9.5px;
-  letter-spacing: 0.11em;
-  text-transform: uppercase;
-  border: 1px solid var(--rule);
-  color: var(--paper-faint);
-  background: var(--chassis-sunk);
-  transition: all 0.35s;
-}
-
-.detent.passed {
-  color: var(--paper-faint);
-  border-color: var(--rule-bright);
-}
-
-.detent.current {
-  color: var(--chassis);
-  background: var(--amber);
-  border-color: var(--amber);
-}
-
-.detent.current.locked {
-  background: var(--oxide);
-  border-color: var(--oxide);
-  animation: latch 0.5s ease-out;
-}
-
-@keyframes latch {
-  0% {
-    transform: scale(1.05);
-    filter: brightness(1.7);
-  }
-}
-
-/* ── clause table ────────────────────────────────────────────────────── */
-
-.clauses {
-  padding: 12px 18px 15px;
-  border-bottom: 1px solid var(--rule);
-}
-
-.clause-row {
-  display: flex;
-  gap: 10px;
-  padding: 3.5px 0;
-  font-size: 11.5px;
-  border-bottom: 1px dotted var(--rule);
-}
-
-.clause-row:last-child {
-  border-bottom: none;
-}
-
-.clause-row .name {
-  color: var(--paper-faint);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.clause-row .value {
-  margin-left: auto;
-  color: var(--paper-dim);
-  flex: none;
-}
-
-.clause-row.binding .name,
-.clause-row.binding .value {
-  color: var(--amber);
-}
-
-.clause-row.void .name,
-.clause-row.void .value {
-  color: var(--oxide);
-  text-decoration: line-through;
-  text-decoration-color: var(--oxide-dim);
-}
-
-/* ── ledger ──────────────────────────────────────────────────────────── */
-
-.ledger {
-  grid-column: 1 / -1;
-  border-top: 1px solid var(--rule);
-  background: var(--chassis-sunk);
-  max-height: 30vh;
-  display: flex;
-  flex-direction: column;
-}
-
-.ledger-body {
-  overflow-y: auto;
-  padding: 4px 0 10px;
-  font-size: 11.5px;
-}
-
-.row {
-  display: grid;
-  grid-template-columns: 74px 150px minmax(0, 1fr) 150px 108px;
-  gap: 14px;
-  padding: 5px 22px;
-  border-bottom: 1px solid #16130f;
-  align-items: baseline;
-  animation: settle 0.3s ease-out both;
-}
-
-.row .seq {
-  color: var(--paper-faint);
-}
-.row .action {
-  color: var(--paper);
-}
-.row .cite {
-  color: var(--paper-dim);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.row .amount {
-  text-align: right;
-  color: var(--paper);
-}
-.row .hash {
-  color: var(--cyan-dim);
-  text-align: right;
-}
-
-.row.refused .action {
-  color: var(--oxide);
-}
-.row.incident {
-  background: rgba(212, 85, 60, 0.07);
-}
-.row.incident .action {
-  color: var(--oxide);
-}
-
-.chain-state {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  color: var(--cyan);
-}
-
-/* ── controls ────────────────────────────────────────────────────────── */
-
-.composer {
-  border-top: 1px solid var(--rule);
-  background: var(--chassis-raised);
-  padding: 11px 18px 13px;
-  flex: none;
-}
-
-.personas {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  margin-bottom: 9px;
-}
-
-.persona {
-  font: inherit;
-  font-size: 10.5px;
-  letter-spacing: 0.03em;
-  padding: 4px 9px;
-  background: transparent;
-  color: var(--paper-dim);
-  border: 1px solid var(--rule-bright);
-  cursor: pointer;
-  transition: all 0.16s;
-}
-
-.persona:hover {
-  color: var(--paper);
-  border-color: var(--paper-faint);
-}
-
-.persona.hostile {
-  color: var(--oxide);
-  border-color: var(--oxide-dim);
-}
-
-.persona.hostile:hover {
-  background: rgba(212, 85, 60, 0.1);
-}
-
-.composer-line {
-  display: flex;
-  gap: 8px;
-}
-
-textarea {
-  flex: 1;
-  font: inherit;
-  background: var(--chassis-sunk);
-  color: var(--paper);
-  border: 1px solid var(--rule-bright);
-  padding: 8px 11px;
-  resize: none;
-  min-height: 54px;
-  outline: none;
-}
-
-textarea:focus {
-  border-color: var(--paper-faint);
-}
-
-textarea::placeholder {
-  color: var(--paper-faint);
-}
-
-button.send {
-  font: inherit;
-  font-size: 11px;
-  letter-spacing: 0.11em;
-  text-transform: uppercase;
-  padding: 0 17px;
-  background: var(--amber);
-  color: var(--chassis);
-  border: none;
-  cursor: pointer;
-  transition: filter 0.16s;
-}
-
-button.send:hover:not(:disabled) {
-  filter: brightness(1.13);
-}
-
-button.send:disabled {
-  background: var(--rule-bright);
-  color: var(--paper-faint);
-  cursor: not-allowed;
-}
-
-/* ── badges ──────────────────────────────────────────────────────────── */
-
-.badge {
-  font-size: 9.5px;
-  letter-spacing: 0.11em;
-  text-transform: uppercase;
-  padding: 2.5px 7px;
-  border: 1px solid var(--rule-bright);
-  color: var(--paper-dim);
-  white-space: nowrap;
-}
-
-.badge.live {
-  color: var(--amber);
-  border-color: var(--amber-dim);
-}
-.badge.sim {
-  color: var(--paper-faint);
-}
-.badge.proof {
-  color: var(--cyan);
-  border-color: var(--cyan-dim);
-}
-.badge.alarm {
-  color: var(--oxide);
-  border-color: var(--oxide);
-}
-
-.dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  display: inline-block;
-  background: currentColor;
-}
-
-.dot.pulse {
-  animation: pulse 1.9s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  50% {
-    opacity: 0.25;
-  }
-}
-
-/* ── collapse: the whole chassis changes state ───────────────────────── */
-
-.console.collapsed .masthead,
-.console.collapsed .panel-head {
-  border-bottom-color: var(--oxide-dim);
-}
-
-.console.collapsed::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 9998;
-  box-shadow: inset 0 0 0 1px var(--oxide-dim), inset 0 0 90px rgba(212, 85, 60, 0.07);
-  animation: alarm 0.7s ease-out;
-}
-
-@keyframes alarm {
-  0% {
-    box-shadow: inset 0 0 0 2px var(--oxide), inset 0 0 200px rgba(212, 85, 60, 0.28);
-  }
-}
-
-.empty {
-  padding: 34px 22px;
-  color: var(--paper-faint);
-  font-size: 12px;
-  line-height: 1.75;
-  max-width: 56ch;
-}
-
-.empty b {
-  color: var(--paper-dim);
-  font-weight: 400;
-}
-
-/* ---------------------------------------------------------------------------
- * Onboarding screen.
- *
- * Same chassis as the console, one column instead of three. The rule it obeys:
- * a confidence bar never appears without the evidence that produced it directly
- * underneath. A bar alone is a verdict the merchant has to accept; a bar above
- * "no unit cost anywhere in the page" is an argument they can act on.
- * ------------------------------------------------------------------------- */
-
-.onboard {
-  max-width: 780px;
-  margin: 0 auto;
-  padding: 0 20px 60px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-/*
- * The console masthead is a grid child spanning three columns; here it is a
- * flex item in a single narrow column, so the wordmark and the tagline collide
- * unless the pair is told to lay itself out.
- */
-.onboard .masthead {
-  margin-bottom: 6px;
-  padding-left: 0;
-  padding-right: 0;
-}
-
-.onboard .masthead > div:first-child {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  min-width: 0;
-}
-
-.onboard .tagline {
-  min-width: 0;
-}
-
-.onboard .panel {
-  border: 1px solid var(--rule);
-  background: var(--chassis-raised);
-}
-
-.onboard .panel.collapsed {
-  border-color: var(--oxide-dim);
-}
-
-.lede {
-  margin: 0 0 14px;
-  color: var(--paper-dim);
-  max-width: 62ch;
-}
-
-.composer-line .target {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.composer-line .sku {
-  flex: 0 0 150px;
-}
-
-.onboard input {
-  font: inherit;
-  padding: 7px 9px;
-  color: var(--paper);
-  background: var(--chassis-sunk);
-  border: 1px solid var(--rule-bright);
-}
-
-.onboard input:focus {
-  outline: none;
-  border-color: var(--amber-dim);
-}
-
-/*
- * Scoped to `.primary` on purpose. A bare `.onboard button` rule sits later in
- * this file than `.persona`, so it silently repainted every fixture chip amber
- * — amber text on amber, which rendered one of them invisible.
- */
-.onboard button.primary {
-  font: inherit;
-  font-size: 11px;
-  padding: 7px 14px;
-  cursor: pointer;
-  color: var(--chassis);
-  background: var(--amber);
-  border: 0;
-}
-
-.onboard button.primary:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.fixtures {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  margin-top: 10px;
-}
-
-.fixtures .persona.on {
-  color: var(--amber);
-  border-color: var(--amber-dim);
-}
-
-.field {
-  padding: 12px 0;
-  border-bottom: 1px solid var(--rule);
-}
-
-.field:last-child {
-  border-bottom: 0;
-}
-
-.field-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  margin-bottom: 6px;
-}
-
-.reason {
-  margin: 8px 0 0;
-  font-size: 11.5px;
-  color: var(--paper-dim);
-  line-height: 1.55;
-}
-
-.reason.dim {
-  color: var(--paper-faint);
-}
-
-.reason.provenance {
-  font-size: 10.5px;
-  margin-top: 10px;
-  padding-left: 9px;
-  border-left: 1px solid var(--rule-bright);
-  word-break: break-word;
-}
-
-.kind {
-  color: var(--oxide);
-  margin-right: 6px;
-}
-
-.evidence {
-  display: block;
-  margin-top: 3px;
-  padding-left: 9px;
-  border-left: 1px solid var(--oxide-dim);
-  color: var(--paper-faint);
-  word-break: break-word;
-}
-
-.mono-wrap {
-  word-break: break-all;
 }
 
 .amber {
@@ -864,23 +506,158 @@ button.send:disabled {
   color: var(--oxide);
 }
 
-.dim {
+/* ── meters ──────────────────────────────────────────────────────────── */
+
+.meter {
+  position: relative;
+  height: 10px;
+  background: var(--chassis-sunk);
+  border: 1px solid var(--rule-bright);
+  overflow: hidden;
+}
+
+.meter-fill {
+  height: 100%;
+  background: var(--amber);
+  transition: width 0.45s cubic-bezier(0.2, 0.7, 0.3, 1), background 0.3s;
+}
+
+.meter-fill.oxide {
+  background: var(--oxide);
+}
+
+/*
+ * The two thresholds, marked on the bar itself.
+ *
+ * A score means nothing without the line it is about to cross, and putting the
+ * numbers only in the legend below makes the reader do the comparison.
+ */
+.meter-tick {
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  width: 1px;
+  background: var(--paper-faint);
+  opacity: 0.75;
+}
+
+.meter-scale {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-size: var(--fs-fine);
   color: var(--paper-faint);
 }
 
-a.badge {
-  text-decoration: none;
+/* ── the ratchet ─────────────────────────────────────────────────────── */
+
+.ratchet {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+  margin-top: 12px;
 }
 
-/* ── the counterparty check ──────────────────────────────────────────────
- *
- * Cyan, because this panel is cryptographic proof and nothing else — the
- * envelope's signature, the delegation, the gate's signature over the offer.
- * It is the only block in the console rendered from the BUYER's inputs, so it
- * gets a rule down its edge to say that it is not the merchant marking its own
- * homework.
- */
+.ratchet .detent {
+  text-align: center;
+  padding: 8px 0;
+  font-size: var(--fs-label);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  border: 1px solid var(--rule-bright);
+  color: var(--paper-faint);
+  transition: background 0.3s, color 0.3s, border-color 0.3s;
+}
 
+.ratchet .detent.passed {
+  border-color: var(--amber-dim);
+  color: var(--amber-dim);
+}
+
+.ratchet .detent.current {
+  background: var(--amber);
+  border-color: var(--amber);
+  color: var(--chassis);
+}
+
+/*
+ * Collapse is the loudest state this screen has, and it is meant to be.
+ * It is also one-way within a session: nothing here animates back.
+ */
+.console.collapsed .ratchet .detent.current {
+  background: var(--oxide);
+  border-color: var(--oxide);
+  color: var(--chassis);
+  animation: alarm-in 0.5s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+@keyframes alarm-in {
+  0% {
+    transform: scale(0.97);
+    opacity: 0.4;
+  }
+  60% {
+    transform: scale(1.015);
+  }
+}
+
+/* ── clause tables ───────────────────────────────────────────────────── */
+
+.clauses {
+  padding: 14px 20px 16px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.clause-row {
+  display: flex;
+  gap: 12px;
+  padding: 5px 0;
+  font-size: var(--fs-data);
+  border-bottom: 1px dotted var(--rule);
+}
+
+.clause-row:last-child {
+  border-bottom: none;
+}
+
+.clause-row .name {
+  color: var(--paper-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.clause-row .value {
+  margin-left: auto;
+  color: var(--paper);
+  white-space: nowrap;
+}
+
+/* The clause that actually bound this decision. */
+.clause-row.binding .name,
+.clause-row.binding .value {
+  color: var(--amber);
+}
+
+/* A clause whose authority is currently zero — struck through, not hidden. */
+.clause-row.void .name,
+.clause-row.void .value {
+  color: var(--oxide);
+}
+
+.console.collapsed .clause-row.binding .name,
+.console.collapsed .clause-row.binding .value {
+  color: var(--oxide);
+}
+
+/*
+ * The counterparty check.
+ *
+ * Cyan, because this block is cryptographic proof and nothing else. It is also
+ * the only thing on this screen computed from the BUYER's inputs — the offer as
+ * JSON, the envelope, a public key — so it gets a rule down its edge to say
+ * that it is not the merchant marking its own homework.
+ */
 .clauses.counterparty {
   border-left: 2px solid var(--cyan-dim);
   background: var(--chassis-sunk);
@@ -896,8 +673,290 @@ a.badge {
 
 .clauses .aside.alarm {
   display: block;
-  margin-top: 8px;
-  font-size: 11px;
-  line-height: 1.45;
+  margin-top: 10px;
+  font-size: var(--fs-fine);
+  line-height: 1.5;
   color: var(--oxide);
+}
+
+/* ── audit ledger ────────────────────────────────────────────────────── */
+
+.ledger {
+  background: var(--chassis-sunk);
+}
+
+.ledger-body {
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
+  font-size: var(--fs-data);
+  scrollbar-width: thin;
+  scrollbar-color: var(--rule-bright) transparent;
+}
+
+/*
+ * One row per money action, refusal and pressure incident.
+ *
+ * Stacked rather than tabular: a five-column table at this width truncates the
+ * clause path, and the clause path is the entire reason the row exists.
+ */
+.ledger .row {
+  display: grid;
+  /* Explicit areas. Auto-placement collided the amount with the hash the
+     moment two children both asked for `grid-column: 2 / -1`. */
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  grid-template-areas:
+    'seq action amount'
+    '.   cite   cite'
+    '.   hash   hash';
+  column-gap: 12px;
+  row-gap: 3px;
+  align-items: baseline;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--rule);
+  animation: settle 0.3s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+.ledger .row .seq { grid-area: seq; }
+.ledger .row .action { grid-area: action; }
+.ledger .row .amount { grid-area: amount; }
+.ledger .row .cite { grid-area: cite; }
+.ledger .row .hash { grid-area: hash; }
+
+.ledger .row .seq {
+  color: var(--paper-faint);
+  font-size: var(--fs-fine);
+}
+
+.ledger .row .action {
+  color: var(--paper);
+  letter-spacing: 0.02em;
+}
+
+.ledger .row .amount {
+  color: var(--paper);
+  white-space: nowrap;
+}
+
+.ledger .row .cite {
+  color: var(--amber);
+  font-size: var(--fs-fine);
+  overflow-wrap: anywhere;
+}
+
+.ledger .row .hash {
+  color: var(--cyan-dim);
+  font-size: var(--fs-fine);
+}
+
+.ledger .row.refused {
+  background: color-mix(in srgb, var(--oxide) 4%, transparent);
+}
+
+.ledger .row.refused .action,
+.ledger .row.refused .cite {
+  color: var(--oxide);
+}
+
+.ledger .row.incident {
+  background: color-mix(in srgb, var(--oxide) 9%, transparent);
+  border-left: 2px solid var(--oxide);
+}
+
+.ledger .row.incident .action {
+  color: var(--oxide);
+}
+
+.ledger .empty {
+  max-width: none;
+  font-size: var(--fs-fine);
+}
+
+/* ── badges ──────────────────────────────────────────────────────────── */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: var(--fs-label);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 5px 10px;
+  border: 1px solid var(--rule-bright);
+  color: var(--paper-dim);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+a.badge:hover {
+  color: var(--paper);
+  border-color: var(--paper-faint);
+}
+
+.badge.live {
+  color: var(--amber);
+  border-color: var(--amber-dim);
+}
+
+.badge.sim {
+  color: var(--paper-faint);
+}
+
+.badge.proof {
+  color: var(--cyan);
+  border-color: var(--cyan-dim);
+}
+
+.badge.alarm {
+  color: var(--oxide);
+  border-color: var(--oxide);
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+
+.pulse {
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+.chain-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--cyan-dim);
+  letter-spacing: 0.06em;
+  text-transform: none;
+}
+
+/* ── responsive ──────────────────────────────────────────────────────── */
+
+/*
+ * Below three columns the ledger goes under the negotiation rather than beside
+ * it. It never goes away: a console that hides its audit trail to fit a laptop
+ * is making the wrong trade for this particular application.
+ */
+@media (max-width: 1440px) {
+  :root {
+    --fs: 14px;
+    --fs-label: 11px;
+    --fs-data: 13px;
+    --fs-fine: 12px;
+  }
+
+  .console {
+    grid-template-columns: minmax(0, 1fr) minmax(360px, 0.8fr);
+    grid-template-rows: auto minmax(0, 1.35fr) minmax(0, 0.65fr);
+  }
+
+  .ledger {
+    grid-column: 1 / -1;
+    border-left: none;
+    border-top: 1px solid var(--rule);
+  }
+
+  .big {
+    font-size: 38px;
+  }
+}
+
+@media (max-width: 900px) {
+  .console {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(320px, 1fr) auto auto;
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .panel,
+  .ledger {
+    border-left: none;
+    border-top: 1px solid var(--rule);
+  }
+
+  .masthead {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .masthead-right {
+    margin-left: 0;
+    flex-wrap: wrap;
+  }
+}
+
+/* ── reference ───────────────────────────────────────────────────────────
+ *
+ * The envelope's clauses, the keys and the catalog do not change during a
+ * negotiation. They belong on the screen — a gate that cites a clause the
+ * reader cannot look up is citing nothing — but they are consulted, not
+ * watched, and giving them the same weight as the live readouts was what made
+ * this column an undifferentiated stack.
+ */
+
+.reference {
+  border-top: 1px solid var(--rule-bright);
+  background: var(--chassis-sunk);
+}
+
+.reference-head {
+  padding: 12px 20px 10px;
+  font-size: var(--fs-label);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--paper-faint);
+}
+
+.reference .clauses {
+  padding-top: 8px;
+  padding-bottom: 12px;
+}
+
+.reference .readout-label {
+  margin-bottom: 7px;
+  color: var(--paper-faint);
+}
+
+/* Reference rows sit a step back from the live ones above them. */
+.reference .clause-row {
+  font-size: var(--fs-fine);
+  padding: 4px 0;
+}
+
+.reference .clause-row .name {
+  color: var(--paper-faint);
+}
+
+.reference .clause-row .value {
+  color: var(--paper-dim);
+}
+
+/*
+ * Except when they carry meaning. `inherit` was wrong here — it resolved to the
+ * default paper colour and quietly un-marked the low-confidence SKU, which is
+ * the one row in the catalog anybody needs to notice.
+ */
+.reference .clause-row.binding .name,
+.reference .clause-row.binding .value {
+  color: var(--amber);
+}
+
+.reference .clause-row.void .name,
+.reference .clause-row.void .value {
+  color: var(--oxide);
+}
+
+/* The empty-state prose reads better anchored to the top of its own column. */
+.panel.negotiation > .panel-body > .empty {
+  margin-bottom: auto;
 }

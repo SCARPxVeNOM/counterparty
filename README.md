@@ -33,17 +33,42 @@ merchant-side selling agent that negotiates, upsells, holds, captures and
 refunds against AI buyers, where **every commercial commitment it makes is signed
 by a deterministic gate holding a merchant-issued authority envelope.**
 
-```
-Buyer agent  ──▶  Selling agent  ──▶  Mandate gate  ──▶  Razorpay
-(adversarial)     (model judgment)    (deterministic)     (executes money)
+```mermaid
+flowchart LR
+    BA["Buying agent<br/><i>untrusted, adversarial</i>"]
+    LLM["Selling agent<br/><i>model judgment</i>"]
+    GATE{{"Mandate gate<br/><i>deterministic</i>"}}
+    ENV["Selling mandate<br/><i>merchant-signed</i>"]
+    RZP["Razorpay<br/><i>executes money</i>"]
+    LED[("Audit ledger<br/><i>hash-chained</i>")]
 
-              ↻ detected pressure tightens the envelope, never loosens it
+    BA -->|message| LLM
+    LLM ==>|"Proposal — binds nothing"| GATE
+    ENV -.->|authority| GATE
+    GATE ==>|"SignedOffer — binds"| RZP
+    GATE -->|"row citing a clause"| LED
+    GATE -.->|"pressure tightens, never loosens"| LLM
+
+    classDef det fill:#131110,stroke:#7a5720,color:#e8a83f
+    classDef mod fill:#131110,stroke:#372f2a,color:#a49b90
+    classDef pf fill:#131110,stroke:#2a5f66,color:#5fcedd
+    class GATE det
+    class LLM,BA mod
+    class ENV,LED pf
 ```
 
 **The invariant: an unsigned offer is not an offer.** The model's output is a
 *proposal*, never a commitment. That is the structural answer to the
 Tahoe-for-$1 class of failure — the model can say anything, and it does not
 matter, because saying is not committing.
+
+Full system diagram, the four seams and the package map:
+**[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)**.
+
+Twelve things that broke and what changed because of them:
+**[`docs/CORRECTIONS.md`](docs/CORRECTIONS.md)** — the primitive that did not
+exist, the verifier that verified nothing, the cassettes the console never
+loaded, the revenue figure that printed zero.
 
 ---
 
@@ -493,7 +518,8 @@ scenarios/    five demo scenarios, runnable whole or one at a time
 scripts/      smoke-live · settle-order · refund-payment ·
               record-cassettes · tamper-ledger · autonomous-buy ·
               live-campaign · revenue-report
-docs/         CORRECTIONS.md — claims that did not survive contact
+docs/         ARCHITECTURE.md — the system, the four seams, the map
+              CORRECTIONS.md — twelve claims that did not survive contact
 ```
 
 `packages/core` is I/O-free on purpose: every clause is testable without a
