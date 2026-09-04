@@ -26,8 +26,48 @@ decision-making.
 
 ## The artifact
 
-A merchant-side selling agent where **every commercial commitment is signed by a
-deterministic gate holding a merchant-issued authority envelope.**
+The missing document. A **selling mandate** — the mirror of AP2's spending
+mandate, signed by the merchant instead of the buyer. This is the real one from
+`demo-artifacts/mandate.json`, trimmed:
+
+```json
+{
+  "envelope_id": "env_demo_0001",
+  "merchant_id": "acc_DEMO0001",
+  "expires_at":  "2026-09-25T03:30:00.000Z",
+
+  "gate_key": { "kid": "a8c8882913b9de5f", "public_key_pem": "…" },
+
+  "authority": {
+    "floor_margin_pct":            18,
+    "max_discount_depth_pct":      15,
+    "excluded_skus":               ["SKU-CLEARANCE-*"],
+    "bundle_rules":                { "max_items": 3, "combined_depth_pct": 20 },
+    "refund_authority":            { "partial": true, "requires_human_above_inr": 5000 },
+    "capture_window_hours":        72,
+    "discount_budget_inr_per_day": 40000,
+    "per_buyer_discount_cap_inr":  2000
+  },
+  "confidence_policy": { "min_margin_confidence": 0.85 },
+  "pressure_policy":   { "collapse_threshold": 0.7, "guard_threshold": 0.4 },
+
+  "signature": { "alg": "Ed25519", "kid": "ef1677c747ea86fa", "role": "merchant", "sig": "…" }
+}
+```
+
+**Every field is a clause the gate can cite by name.** That is what makes
+"explainable" real rather than decorative — a refusal says
+`authority.per_buyer_discount_cap_inr`, and you can look it up above.
+
+`gate_key` is the load-bearing addition the design note did not have. The
+merchant delegates to **one specific gate key**, so a signature on an offer
+proves not merely that some gate approved it but that *this merchant authorized
+that gate and bounded what it could do*. Without it the verification chain has no
+anchor.
+
+Around it: a selling agent that negotiates, upsells, captures and refunds, where
+**every commercial commitment is signed by a deterministic gate holding this
+envelope.**
 
 ```mermaid
 flowchart LR
@@ -100,8 +140,19 @@ separate decisions, and the gap between them is the option §5.3 is about.
 }
 ```
 
+<!-- Drop the Dashboard screenshot in and delete this comment to show it.
+     See docs/images/README.md for exactly what to capture and what to redact.
+![The same objects in the Razorpay Dashboard](docs/images/razorpay-dashboard.jpg)
+-->
+
 Open it in the Dashboard and the clause that authorized the price is on the
-object. The audit trail is not only in this repo.
+object. The audit trail is not only in this repo — and none of the ids in this
+README are ones you have to take on trust:
+
+```bash
+curl -u "$RZP_KEY_ID:$RZP_KEY_SECRET" \
+  https://api.razorpay.com/v1/orders/order_TY87q17mUQfIXb
+```
 
 ![A real Razorpay payment link issued at the signed price](docs/images/razorpay-payment-link.jpg)
 
