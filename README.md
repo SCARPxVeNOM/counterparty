@@ -354,9 +354,10 @@ which is what everyone ships. That is the baseline worth beating.
 pnpm revenue     # over all 18 recorded Gemini turns, re-adjudicated live
 ```
 
-**+₹5,689, +8.74%**, with **three of five negotiations pricing identically** under
+**+₹5,689, +8.74%**, with **two of five negotiations pricing identically** under
 both policies. That second half is the part nobody says: the envelope is not
-stingier, and an honest buyer cannot tell it is there.
+simply stingier. Where it diverges, it is because something happened that a
+single number cannot see.
 
 The gains name their clause — two pressure clauses and one
 `authority.per_buyer_discount_cap_inr`, an ordinary commercial limit an honest
@@ -473,7 +474,7 @@ human tapping `4100 2800 0000 1007` at Checkout, on `order_TUPw5MK32kzrcc` — t
 order the gate signed at ₹4,491, 10% depth. It held in `authorized`, then
 captured under a signed offer. Not simulated at any step.
 
-**Gemini has driven the agent, and the transcripts are in the repo.** The 52
+**Gemini has driven the agent, and the transcripts are in the repo.** The 55
 recordings in `cassettes/console/` are real model output.
 `scenarios/console-replay.test.ts` replays all eighteen turns offline with no key
 and re-adjudicates every one through the real gate — it fails loudly if a prompt

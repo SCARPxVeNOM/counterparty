@@ -56,7 +56,7 @@ AUTHORIZE_MODE=sim
 NODE_ENV=production
 ```
 
-`LLM_MODE=cassette` is the deliberate choice for a hosted demo. The 52
+`LLM_MODE=cassette` is the deliberate choice for a hosted demo. The 55
 recordings in `cassettes/console/` are committed, so every persona replays in
 about 100ms with no API key spend and no rate limit — and the gate, the
 detectors, the signing and the audit chain all still run live, because none of
