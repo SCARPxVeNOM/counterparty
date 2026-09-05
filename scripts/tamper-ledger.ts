@@ -26,14 +26,14 @@ import { existsSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import Database from 'better-sqlite3';
-import { fromRepoRoot } from '@counterparty/config';
+import { ledgerPath } from '@counterparty/config';
 import { verifyLedgerFile } from '@counterparty/store';
 
 const OK = 'PASS';
 const NO = 'FAIL';
 
 function main(): void {
-  const source = process.argv[2] ?? fromRepoRoot('data', 'console.db');
+  const source = process.argv[2] ?? ledgerPath();
 
   if (!existsSync(source)) {
     console.error(

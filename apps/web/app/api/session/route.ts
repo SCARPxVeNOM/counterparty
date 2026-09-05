@@ -27,7 +27,7 @@ import {
 import { Session } from '@counterparty/agents';
 import { PERSONAS, type PersonaId } from '@counterparty/agents';
 import { createProvider, type LLMProvider } from '@counterparty/llm';
-import { MODELS, fromRepoRoot, loadConfig, readiness } from '@counterparty/config';
+import { MODELS, fromRepoRoot, ledgerPath, loadConfig, readiness } from '@counterparty/config';
 import { SqliteLedger } from '@counterparty/store';
 import {
   CATALOG,
@@ -83,7 +83,7 @@ function providerFor(): { provider: LLMProvider; agentMode: 'gemini' | 'scripted
 let ledgerHandle: SqliteLedger | undefined;
 
 export function ledger(): SqliteLedger {
-  ledgerHandle ??= new SqliteLedger({ path: fromRepoRoot('data', 'console.db') });
+  ledgerHandle ??= new SqliteLedger({ path: ledgerPath() });
   return ledgerHandle;
 }
 

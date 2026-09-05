@@ -1872,3 +1872,39 @@ a.primary.link {
   font-size: 11px;
   color: var(--ink-2);
 }
+
+/* ── the marks ───────────────────────────────────────────────────────────
+ *
+ * Both logos are drawn as a glowing glyph on near-black, so they are used as
+ * dark tiles rather than knocked out. Against a light rail that reads as an app
+ * icon, which is what they are, and it keeps the glow the artwork depends on.
+ */
+
+.brand-mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  flex: none;
+  object-fit: cover;
+}
+
+/* The agent's face, next to what the agent said. */
+.who {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.who-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  flex: none;
+  object-fit: cover;
+}
+
+@media (max-width: 1080px) {
+  .who {
+    gap: 5px;
+  }
+}

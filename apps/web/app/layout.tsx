@@ -36,6 +36,7 @@ const mono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   title: 'Counterparty — selling mandate console',
   description: 'The merchant’s selling agent, with a signed selling mandate.',
+  icons: { icon: '/favicon.ico', apple: '/counterparty-256.png' },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

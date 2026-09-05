@@ -605,7 +605,12 @@ export default function Console() {
                     : view.ledger.rows.find((r) => r.seq === entry.rowSeq);
                 return (
                   <div className={`utterance ${entry.speaker}`} key={index}>
-                    <div className="who">{entry.speaker === 'buyer' ? 'buyer' : 'agent'}</div>
+                    <div className="who">
+                      {entry.speaker === 'agent' && (
+                        <img className="who-avatar" src="/agent-64.png" alt="" width={22} height={22} />
+                      )}
+                      {entry.speaker === 'buyer' ? 'buyer' : 'agent'}
+                    </div>
                     <div className={`said${verdict?.outcome === 'refused' ? ' unbound' : ''}`}>
                       {entry.speaker === 'buyer'
                         ? markEvidence(entry.text, evidenceByTurn.get(buyerTurn) ?? [])
@@ -649,7 +654,10 @@ export default function Console() {
                 <div className="said">{pending}</div>
               </div>
               <div className="utterance agent">
-                <div className="who">agent</div>
+                <div className="who">
+                  <img className="who-avatar" src="/agent-64.png" alt="" width={22} height={22} />
+                  agent
+                </div>
                 <div className="working">
                   <span className="spin" />
                   <span>

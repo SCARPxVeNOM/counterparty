@@ -53,7 +53,8 @@ export function Shell({
     <div className="shell">
       <aside className="rail">
         <a className="brand" href="/">
-          <span className="brand-mark" aria-hidden="true" />
+          {/* The mark ships as a dark tile, so it keeps its glow against a light rail. */}
+          <img className="brand-mark" src="/counterparty-128.png" alt="" width={28} height={28} />
           <span className="brand-name">Counterparty</span>
         </a>
 

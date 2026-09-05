@@ -89,6 +89,25 @@ export function fromRepoRoot(...segments: readonly string[]): string {
   return join(repoRoot(), ...segments);
 }
 
+/**
+ * Where the audit ledger lives.
+ *
+ * `data/console.db` under the repo locally, and whatever `LEDGER_PATH` says in
+ * a deployed environment. That override is not a convenience — a container
+ * filesystem is wiped on every redeploy, so a ledger written to the image would
+ * reset each time the app ships. For a project whose claim is that the record
+ * outlives the process that wrote it, that would be the most embarrassing
+ * possible way to be wrong.
+ *
+ * On Railway: attach a volume and set LEDGER_PATH to a file inside its mount.
+ */
+export function ledgerPath(): string {
+  const override = process.env['LEDGER_PATH'];
+  return override !== undefined && override !== ''
+    ? override
+    : fromRepoRoot('data', 'console.db');
+}
+
 export function parseEnvFile(contents: string): Record<string, string> {
   const values: Record<string, string> = {};
   for (const line of contents.split(/\r?\n/)) {
