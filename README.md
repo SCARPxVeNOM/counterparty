@@ -4,6 +4,12 @@
 
 Razorpay AI Buildathon 2026 — Track 01: AI Growth & Agentic Commerce
 
+### ▶ **[counterparty-web-production.up.railway.app](https://counterparty-web-production.up.railway.app)**
+
+Live, nothing to install. Click **Honest bulk buyer**, then **Prompt injector**
+and watch the envelope collapse. Personas replay recorded Gemini in ~100ms; the
+Razorpay orders and payment links are real test-mode objects.
+
 ---
 
 ## The gap

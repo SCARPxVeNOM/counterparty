@@ -472,7 +472,10 @@ export default function Console() {
           third of the width and their labels truncated. */}
           <div className="stat-band">
           <div className="stat">
-            <div className="stat-label">Discount authority</div>
+            <div className="stat-label">
+                <StatIcon glyph="authority" />
+                Discount authority
+              </div>
             <div className={`stat-value ${collapsed ? 'oxide' : 'amber'}`}>
               {view.authority.ceilingPct.toFixed(1)}
               <span className="unit">%</span>
@@ -484,7 +487,10 @@ export default function Console() {
           </div>
 
           <div className="stat">
-            <div className="stat-label">Manipulation pressure</div>
+            <div className="stat-label">
+                <StatIcon glyph="pressure" />
+                Manipulation pressure
+              </div>
             <div className={`stat-value ${collapsed ? 'oxide' : ''}`}>
               {view.pressure.score.toFixed(2)}
             </div>
@@ -500,7 +506,10 @@ export default function Console() {
           </div>
 
           <div className="stat">
-            <div className="stat-label">Discount budget</div>
+            <div className="stat-label">
+                <StatIcon glyph="budget" />
+                Discount budget
+              </div>
             <div className="stat-value">{money(view.budget.remainingInr)}</div>
             <div className="stat-sub">of {money(view.budget.limitInr)} today</div>
             <div className="stat-rule">
@@ -509,7 +518,10 @@ export default function Console() {
           </div>
 
           <div className="ratchet-row">
-          <span className="stat-label">Envelope state</span>
+          <span className="stat-label">
+              <StatIcon glyph="state" />
+              Envelope state
+            </span>
           <div className="ratchet" title="Monotonic within a session. Only human review resets it.">
             {(['NORMAL', 'GUARDED', 'COLLAPSED'] as const).map((state) => {
               const order = { NORMAL: 0, GUARDED: 1, COLLAPSED: 2 };
@@ -1047,6 +1059,37 @@ function Clause({
  * Razorpay form asking for a card number they do not have, and the answer
  * should not require reading the README.
  */
+/**
+ * A glyph for each figure, instead of an empty tinted circle.
+ *
+ * The circles were decoration standing in for an icon that was never drawn —
+ * three identical green dots labelling three different things. Each one now
+ * says what it measures: a shield for authority, a warning for pressure, a
+ * wallet for the budget, a lock for the ratchet.
+ */
+function StatIcon({ glyph }: { glyph: 'authority' | 'pressure' | 'budget' | 'state' }) {
+  const paths = {
+    authority: 'M8 1.6 2.6 4v3.9c0 2.9 2.3 5 5.4 5.5 3.1-.5 5.4-2.6 5.4-5.5V4L8 1.6Z',
+    pressure: 'M8 2.2 1.8 13h12.4L8 2.2Zm0 4v3.1M8 11.1h.01',
+    budget: 'M2 5.2h12v7.2H2V5.2Zm0 0 1.4-2.4h9.2L14 5.2M10.4 8.8h2.2',
+    state: 'M4.4 7.2V5.4a3.6 3.6 0 0 1 7.2 0v1.8M3.4 7.2h9.2v6H3.4v-6Z',
+  } as const;
+
+  return (
+    <span className="stat-icon" aria-hidden="true">
+      <svg viewBox="0 0 16 16" fill="none">
+        <path
+          d={paths[glyph]}
+          stroke="currentColor"
+          strokeWidth="1.4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </span>
+  );
+}
+
 function TestCard() {
   const [copied, setCopied] = useState(false);
   const number = '4100 2800 0000 1007';

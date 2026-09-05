@@ -1,7 +1,24 @@
 # Deploying to Railway
 
-Ten minutes, most of it waiting for a build. `railway.json` is committed; the
-rest is four settings in their dashboard.
+**Live at <https://counterparty-web-production.up.railway.app>.**
+
+Ten minutes, most of it waiting for a build.
+
+## What actually mattered
+
+Two things cost a deploy each, and both are now fixed in the repo:
+
+**Do not build at start.** The root `start` script used to run `build && start`,
+which is convenient locally and fatal on a host: the runtime container is
+smaller than the build one, so `next build` ran a second time there and was
+OOM-killed with exit 137. `start` now only starts; `pnpm preview` is the local
+build-and-serve.
+
+**Railpack runs the root `build` and `start` scripts.** It does not necessarily
+read `railway.json`. Giving it a root `build` script that builds the web app is
+more reliable than fighting the builder, and `next start` needs `-p $PORT -H
+0.0.0.0` because a container hands the port in and expects the app on every
+interface — `next start` defaults to neither.
 
 ## 1. Create the service
 

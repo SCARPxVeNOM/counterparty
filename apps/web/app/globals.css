@@ -577,18 +577,26 @@ a.badge:hover {
   white-space: nowrap;
 }
 
-/* A tinted circular glyph, the way the reference marks each figure. */
-.stat-label::before {
-  content: '';
+/* A tinted disc with the glyph for whatever this figure measures. */
+.stat-icon {
+  display: grid;
+  place-items: center;
   width: 22px;
   height: 22px;
   border-radius: 50%;
   background: var(--brand-tint);
+  color: var(--brand-deep);
   flex: none;
 }
 
-.console.collapsed .stat-label::before {
+.stat-icon svg {
+  width: 13px;
+  height: 13px;
+}
+
+.console.collapsed .stat-icon {
   background: var(--danger-tint);
+  color: var(--danger);
 }
 
 .stat-value {
@@ -723,7 +731,7 @@ a.badge:hover {
 
 .utterance {
   display: grid;
-  grid-template-columns: 54px minmax(0, 1fr);
+  grid-template-columns: 72px minmax(0, 1fr);
   gap: 12px;
   padding: 9px 0;
   animation: settle 0.28s cubic-bezier(0.2, 0.7, 0.3, 1) both;
@@ -1888,23 +1896,25 @@ a.primary.link {
   object-fit: cover;
 }
 
-/* The agent's face, next to what the agent said. */
+/*
+ * The agent's face, next to what the agent said.
+ *
+ * The avatar and its label together were wider than the 54px speaker column
+ * and spilled over the message. The column is 72px now, the label cannot wrap
+ * into the text, and nothing overflows.
+ */
 .who {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .who-avatar {
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
+  width: 19px;
+  height: 19px;
+  border-radius: 5px;
   flex: none;
   object-fit: cover;
-}
-
-@media (max-width: 1080px) {
-  .who {
-    gap: 5px;
-  }
 }

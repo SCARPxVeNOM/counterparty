@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev -p 3939",
     "build": "next build",
-    "start": "next start -p 3939"
+    "start": "next start -p ${PORT:-3939} -H 0.0.0.0"
   },
   "dependencies": {
     "@counterparty/agents": "workspace:*",

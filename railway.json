@@ -5,9 +5,9 @@
     "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter @counterparty/web build"
   },
   "deploy": {
-    "startCommand": "pnpm --filter @counterparty/web start -- -p $PORT -H 0.0.0.0",
+    "startCommand": "cd apps/web && npx next start -p $PORT -H 0.0.0.0",
     "healthcheckPath": "/",
-    "healthcheckTimeout": 120,
+    "healthcheckTimeout": 300,
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 3
   }
