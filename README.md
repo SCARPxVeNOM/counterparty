@@ -4,6 +4,11 @@
 
 Razorpay AI Buildathon 2026 — Track 01: AI Growth & Agentic Commerce
 
+![How Counterparty works: the merchant signs a selling mandate; the AI selling
+agent negotiates and proposes; only the deterministic policy gate can sign an
+offer; Razorpay creates the order and writes the authorizing clause into the
+order notes; every action lands in a hash-chained audit log.](docs/images/how-it-works.png)
+
 ### ▶ **[counterparty-web-production.up.railway.app](https://counterparty-web-production.up.railway.app)**
 
 Live, nothing to install. Click **Honest bulk buyer**, then **Prompt injector**
