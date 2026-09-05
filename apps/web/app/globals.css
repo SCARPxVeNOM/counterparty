@@ -1918,3 +1918,32 @@ a.primary.link {
   flex: none;
   object-fit: cover;
 }
+
+/* ── how much longer Gemini is likely to be ──────────────────────────────
+ *
+ * Counts down from an estimate and keeps counting up past it. A countdown that
+ * hits zero and sits there has told the reader the wait is over at the exact
+ * moment it stopped being able to say anything true.
+ */
+
+.countdown {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  margin-top: 6px;
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+
+.countdown-value {
+  font-family: var(--font-mono), monospace;
+  font-size: 13px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--brand-deep);
+  min-width: 3.5ch;
+}
+
+.countdown.over .countdown-value {
+  color: var(--ink-2);
+}

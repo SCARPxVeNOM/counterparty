@@ -248,6 +248,17 @@ export default function Console() {
    * the console looked frozen.
    */
   const [pending, setPending] = useState<string | null>(null);
+  /**
+   * When the turn in flight started, and what it is expected to cost.
+   *
+   * A scripted persona replays from a recording and comes back in about a tenth
+   * of a second; a message someone typed is a live Gemini call and has measured
+   * anywhere from twenty to fifty seconds. Those are different enough that one
+   * spinner cannot honestly represent both.
+   */
+  const [waitStartedAt, setWaitStartedAt] = useState<number | null>(null);
+  const [waitBudgetMs, setWaitBudgetMs] = useState(45_000);
+  const [tick, setTick] = useState(0);
   /** What Razorpay returned for the offer that was taken to the rails. */
   const [money_, setMoney] = useState<MoneyResult | null>(null);
   const [paying, setPaying] = useState(false);
@@ -277,12 +288,27 @@ export default function Console() {
     ledgerRef.current?.scrollTo({ top: ledgerRef.current.scrollHeight, behavior: 'smooth' });
   }, [view?.transcript.length, view?.ledger.rows.length]);
 
+  /**
+   * Tick once a second while something is in flight, and not otherwise.
+   *
+   * The interval exists only for the countdown, so it is created when a turn
+   * starts and torn down when it lands — a timer left running behind an idle
+   * console is a re-render every second for nothing.
+   */
+  useEffect(() => {
+    if (waitStartedAt === null) return;
+    const id = window.setInterval(() => setTick((n) => n + 1), 1000);
+    return () => window.clearInterval(id);
+  }, [waitStartedAt]);
+
   const send = useCallback(
-    async (message: string) => {
+    async (message: string, expectMs = 45_000) => {
       if (message.trim() === '' || busy) return;
       setBusy(true);
       setDraft('');
       setPending(message);
+      setWaitBudgetMs(expectMs);
+      setWaitStartedAt(Date.now());
       try {
         const response = await fetch('/api/session', {
           method: 'POST',
@@ -293,6 +319,7 @@ export default function Console() {
       } finally {
         setBusy(false);
         setPending(null);
+        setWaitStartedAt(null);
       }
     },
     [busy, sessionId],
@@ -667,17 +694,16 @@ export default function Console() {
               </div>
               <div className="utterance agent">
                 <div className="who">
-                  <img className="who-avatar" src="/agent-64.png" alt="" width={22} height={22} />
+                  <img className="who-avatar" src="/agent-64.png" alt="" width={19} height={19} />
                   agent
                 </div>
                 <div className="working">
                   <span className="spin" />
                   <span>
-                    Detectors have run. Waiting on the model, then the gate.
-                    <span className="working-note">
-                      A scripted buyer replays instantly; a message you typed is a live
-                      model call and can take up to a minute.
-                    </span>
+                    Detectors have run. Waiting on{' '}
+                    {view.runtime.agentMode === 'gemini' ? 'Gemini' : 'the agent'}, then the
+                    gate.
+                    <Countdown startedAt={waitStartedAt} budgetMs={waitBudgetMs} tick={tick} />
                   </span>
                 </div>
               </div>
@@ -699,7 +725,7 @@ export default function Console() {
                 className={`persona${persona.adversarial ? ' hostile' : ''}`}
                 title={persona.summary}
                 disabled={busy}
-                onClick={() => void send(persona.opening)}
+                onClick={() => void send(persona.opening, 4_000)}
               >
                 {persona.label}
               </button>
@@ -1067,6 +1093,44 @@ function Clause({
  * says what it measures: a shield for authority, a warning for pressure, a
  * wallet for the budget, a lock for the ratchet.
  */
+/**
+ * How much longer Gemini is likely to be.
+ *
+ * Counts down from an estimate and then keeps counting *up* once it passes it.
+ * A countdown that reaches zero and sits there is worse than no countdown: it
+ * has told the reader the wait is over at the exact moment it stops being able
+ * to say anything true. Overrunning and saying so is the honest version.
+ *
+ * The estimate is per-source, not global — a persona replays from a recording
+ * in about 100ms, a typed message is a live call and has measured 20-50s.
+ */
+function Countdown({
+  startedAt,
+  budgetMs,
+  tick,
+}: {
+  startedAt: number | null;
+  budgetMs: number;
+  /** Only here to make the parent re-render each second. */
+  tick: number;
+}) {
+  void tick;
+  if (startedAt === null) return null;
+
+  const elapsed = Date.now() - startedAt;
+  const left = Math.ceil((budgetMs - elapsed) / 1000);
+  const over = left <= 0;
+
+  return (
+    <span className={`countdown${over ? ' over' : ''}`}>
+      <span className="countdown-value">
+        {over ? `${Math.floor(elapsed / 1000)}s` : `~${left}s`}
+      </span>
+      {over ? 'longer than usual — still waiting' : 'estimated'}
+    </span>
+  );
+}
+
 function StatIcon({ glyph }: { glyph: 'authority' | 'pressure' | 'budget' | 'state' }) {
   const paths = {
     authority: 'M8 1.6 2.6 4v3.9c0 2.9 2.3 5 5.4 5.5 3.1-.5 5.4-2.6 5.4-5.5V4L8 1.6Z',
